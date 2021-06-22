@@ -11,7 +11,7 @@ from vivarium import Artifact
 # pulling that data here:
 
 #exposure stratified mortality rates
-mort = pd.read_csv('/ihme/homes/beatrixh/vivarium_research_ciff/wasting_transitions/cat_strat_mort_2021_06_08.csv')
+mort = pd.read_csv('/ihme/homes/beatrixh/vivarium_research_ciff/wasting_transitions/cat_strat_mort_2021_06_16.csv')
 
 # wasting exposures
 
