@@ -66,28 +66,28 @@ def set_ds(sex_id, age_group_id):
 def set_fs(sex_id, age_group_id):
     # pull prev (for emr)
     f1 = float(wasting_exp.loc[
-        (wasting_exp.age_group_id==4) &
-        (wasting_exp.sex_id==2) &
+        (wasting_exp.age_group_id==age_group_id) &
+        (wasting_exp.sex_id==sex_id) &
         (wasting_exp.parameter=='cat1')].mean_value)
     f2 = float(wasting_exp.loc[
-        (wasting_exp.age_group_id==4) &
-        (wasting_exp.sex_id==2) &
+        (wasting_exp.age_group_id==age_group_id) &
+        (wasting_exp.sex_id==sex_id) &
         (wasting_exp.parameter=='cat2')].mean_value)
     f3 = float(wasting_exp.loc[
-        (wasting_exp.age_group_id==4) &
-        (wasting_exp.sex_id==2) &
+        (wasting_exp.age_group_id==age_group_id) &
+        (wasting_exp.sex_id==sex_id) &
         (wasting_exp.parameter=='cat3')].mean_value)
     f4 = float(wasting_exp.loc[
-        (wasting_exp.age_group_id==4) &
-        (wasting_exp.sex_id==2) &
+        (wasting_exp.age_group_id==age_group_id) &
+        (wasting_exp.sex_id==sex_id) &
         (wasting_exp.parameter=='cat4')].mean_value)
     
     return f1, f2, f3, f4
 
 
 def set_ps(sex_id, age_group_id, time_step):
-    acmr = float(acmr_df.loc[(acmr_df.age_group_id==4) &
-                             (acmr_df.sex_id==2)].val)
+    acmr = float(acmr_df.loc[(acmr_df.age_group_id==age_group_id) &
+                             (acmr_df.sex_id==sex_id)].val)
     p0 = 1 - np.exp(-acmr*time_step/365)
     Z = 1 + p0 #normalize prevalences of wasting exposures by reincarnation pool prev
     
