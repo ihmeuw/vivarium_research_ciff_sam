@@ -125,6 +125,22 @@ def rate_or_ratio(numerator, denominator,
     
     return rate_or_ratio.reset_index()
 
+def divide(numerator:pd.DataFrame, denominator:pd.DataFrame, strata:list, extra_numerator_strata=None, broadcast_cols=None)-> pd.DataFrame: # or just numerator_broadcast instead of having two separate arguments
+    index_cols = INDEX_COLUMNS
+
+    if extra_numerator_strata is None:
+        extra_numerator_strata = []
+
+    if broadcast_cols is None:
+        broadcast_cols = []
+
+    numerator = numerator.groupby(strata+index_cols+extra_numerator_strata+broadcast_cols)[VALUE_COLUMN].sum()
+    denominator = denominator.groupby(strata+index_cols)[VALUE_COLUMN].sum()
+
+    rate_or_ratio = numerator / denominator
+
+    return rate_or_ratio.reset_index()
+
 def averted(measure, baseline_scenario, scenario_col=None):
     """
     Compute an "averted" measure (e.g. DALYs) or measures by subtracting
