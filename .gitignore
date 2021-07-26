@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 
 # Flag to explicitly ignore a file
-*__gitignor__*
+*__gitignore__*
 
