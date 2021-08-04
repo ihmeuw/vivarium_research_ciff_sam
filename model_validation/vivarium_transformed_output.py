@@ -3,8 +3,67 @@ Module providing functions and data structures for loading and storing transform
 (i.e. the minimally processed .csv or .hdf tables saved in the "count_data" folder for a model).
 """
 
+import collections
 import pandas as pd
 import os
+
+class VivariumTransformedOutput(collections.abc.Mapping):
+    """Implementation of the Mapping abstract base class to conveniently store transformed
+    Vivarium count data tables as object attributes.
+    """
+
+    def __init__(self, table_dict):
+        """Create a VivariumTransformedOutput object from a dictionary (or other implementation of Mapping)
+        that maps table names (strings) to tables (e.g. pandas DataFrames). Dictionary keys become object attributes
+        that store the corresponding dictionary values. The keys (table names) must be valid Python variable names
+        (this is not enforced in the constructor, but bad variable names will cause problems for you later).
+        """
+        self.__dict__ = dict(table_dict)
+
+    @classmethod
+    def from_directory(cls, directory):
+        """Create a VivariumTransformedOutput object from the directory where the count data tables from a single
+        simulation are stored.
+
+        Example usage:
+        data = VivariumTransformedOutput.from_directory('/path/to/count_data')
+        data.ylls # YLL table
+        data.person_time # Person-time table
+        """
+        return cls(load_transformed_count_data(directory))
+
+    @classmethod
+    def merged_from_locations_paths(cls, locations_paths, subdirectory='count_data'):
+        """Create a VivariumTransformedOutput object from a dictionary that maps each location name to a
+        directory that contains a subdirectory with the count data tables for that location (you can specify
+        subdirectory='' if the dictionary contains paths directly to the count data). The corresponding tables
+        from different locations will be merged together (concatenatd) with a 'location' column added to indicate
+        the source of each table row. Each location must have the same data tables, and tables with the same name
+        must have the same format.
+
+        Example usage:
+        # Assuming the count data for 'Location' is in '/path/to/location/output/count_data'
+        locations_paths = {'Ethiopa': '/path/to/ethiopia/output', 'India': '/path/to/india/output'}
+        data = VivariumTransformedOutput.merged_from_locations_paths(locations_paths, subdirectory='count_data')
+        data.ylls # Merged YLL table for Ethiopia and India
+        data.person_time # Merged person-time table for Ethiopia and India
+        """
+        return cls(load_and_merge_location_count_data(locations_paths, subdirectory))
+
+    def __getitem__(self, table_name):
+        return self.__dict__[table_name]
+
+    def __iter__(self):
+        return iter(self.__dict__)
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    def to_dict(self):
+        return dict(self.__dict__)
+
+    def table_names(self):
+        return list(self.keys())
 
 def load_transformed_count_data(directory: str) -> dict:
     """
