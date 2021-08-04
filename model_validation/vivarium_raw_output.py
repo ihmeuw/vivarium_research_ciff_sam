@@ -1,3 +1,8 @@
+"""
+Module providing functions and data structures for loading and storing raw Vivarium output
+(i.e. the output.hdf files).
+"""
+
 import pandas as pd
 import os
 

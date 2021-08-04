@@ -1,3 +1,8 @@
+"""
+Module providing functions and data structures for loading and storing transformed Vivarium output
+(i.e. the minimally processed .csv or .hdf tables saved in the "count_data" folder for a model).
+"""
+
 import pandas as pd
 import os
 
