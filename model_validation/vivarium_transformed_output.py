@@ -20,7 +20,7 @@ def load_count_data_by_location(locations_paths: dict, subdirectory='count_data'
     Loads data from all locations into a dictionary of dictionaries of dataframes,
     indexed by location. Each dictionary in the outer dictionary is
     indexed by filename
-    
+
     For each location, reads data files from a directory called f'{path}/{subdirectory}/',
     where `path` is the path for the location specified in the `locations_paths` dictionary.
     """
