@@ -6,6 +6,7 @@ Module providing functions and data structures for loading and storing transform
 import collections
 import pandas as pd
 import os
+import re
 
 class VivariumTransformedOutput(collections.abc.Mapping):
     """Implementation of the Mapping abstract base class to conveniently store transformed
@@ -31,6 +32,31 @@ class VivariumTransformedOutput(collections.abc.Mapping):
         data.person_time # Person-time table
         """
         return cls(load_transformed_count_data(directory))
+
+    @classmethod
+    def from_locations_paths(cls, locations_paths, subdirectory='count_data'):
+        """Create a VivariumTransformedOutput object from a dictionary that maps each location name to a
+        directory that contains a subdirectory with the count data tables for that location (you can specify
+        subdirectory='' if the dictionary contains paths directly to the count data). Each location name will
+        become an attribute that stores another VivariumTransformedOutput object with the corresponding tables.
+
+        Example usage:
+        # Assuming the count data for 'location' is in '/path/to/location/output/count_data'
+        locations_paths = {'Ethiopa': '/path/to/ethiopia/output', 'India': '/path/to/india/output'}
+        data = VivariumTransformedOutput.from_locations_paths(locations_paths, subdirectory='count_data')
+        data.ethiopia.ylls # YLL table for Ethiopia
+        data.india.person_time # Person-time table for India
+        """
+        # Solution for converting a string to a valid Python variable copied from here:
+        # https://stackoverflow.com/questions/3303312/how-do-i-convert-a-string-to-a-valid-variable-name-in-python
+        # Strings of non-word characters (regex matchs \W+) are converted to '_', and '_' is appended to the
+        # beginning of the string if the string starts with a digit (regex matches ^(?=\d)).
+        def convert_to_variable_name(string): return re.sub('\W+|^(?=\d)', '_', string)
+        locations_count_data = load_count_data_by_location(locations_paths, subdirectory)
+        return cls({
+            convert_to_variable_name(location.lower()): cls(count_data)
+            for location, count_data in locations_count_data.items()
+        })
 
     @classmethod
     def merged_from_locations_paths(cls, locations_paths, subdirectory='count_data'):
