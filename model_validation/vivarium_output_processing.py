@@ -91,7 +91,7 @@ def ratio(
 
     return ratio.reset_index()
 
-def averted(measure, baseline_scenario, scenario_col=None):
+def averted(measure: pd.DataFrame, baseline_scenario: str, scenario_col=None):
     """
     Compute an "averted" measure (e.g. DALYs) or measures by subtracting
     the intervention value from the baseline value.
@@ -118,32 +118,10 @@ def averted(measure, baseline_scenario, scenario_col=None):
     """
     
     scenario_col = SCENARIO_COLUMN if scenario_col is None else scenario_col
-    
-    # Filter to create separate dataframes for baseline and intervention
-    baseline = measure[measure[scenario_col] == baseline_scenario]
-    intervention = measure[measure[scenario_col] != baseline_scenario]
-    
-    # Columns to match when subtracting intervention from baseline
-    index_columns = sorted(set(baseline.columns) - set([scenario_col, VALUE_COLUMN]),
-                           key=baseline.columns.get_loc)
-    print(index_columns)
-    
-    # Put the scenario column in the index of intervention but not baseline.
-    # When we subtract, this will broadcast over different interventions if there are more than one.
-    baseline = baseline.set_index(index_columns)
-    intervention = intervention.set_index(index_columns+[scenario_col])
-    print('baseline index:', baseline.index.names)
-    print('intervention index:', intervention.index.names)
-    
-    # Get the averted values
-    averted = baseline[[VALUE_COLUMN]] - intervention[[VALUE_COLUMN]]
-    print('averted index:', averted.index.names)
-    
+    # Subtract intervention from baseline
+    averted = difference(measure, identifier_col=scenario_col, minuend_id=baseline_scenario)
     # Insert a column after the scenario column to record what the baseline scenario was
-    averted = averted.reset_index()
-    print(averted.columns)
-    averted.insert(averted.columns.get_loc(scenario_col)+1, 'relative_to', baseline_scenario)
-    
+#     averted.insert(averted.columns.get_loc(scenario_col)+1, 'relative_to', baseline_scenario)
     return averted
 
 def difference(measure:pd.DataFrame, identifier_col:str, minuend_id=None, subtrahend_id=None)->pd.DataFrame:
