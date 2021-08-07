@@ -49,6 +49,7 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_in
         which have been aggregated over.
         If reset_index == False, all the resulting columns will be placed in the DataFrame's index except for `value_cols`.
     """
+    # TOODO: Write a separate function to turn singletons into lists if necessary, instead of copying code
     marginalized_cols = marginalized_cols if isinstance(marginalized_cols, (list, pd.Index)) else [marginalized_cols]
     value_cols = value_cols if isinstance(value_cols, (list, pd.Index)) else [value_cols]
     # Move MultiIndex levels into columns to enable passing index level names as well as column names
