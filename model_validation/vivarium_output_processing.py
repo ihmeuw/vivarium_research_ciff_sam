@@ -125,21 +125,78 @@ def rate_or_ratio(numerator, denominator,
     
     return rate_or_ratio.reset_index()
 
-def divide(numerator:pd.DataFrame, denominator:pd.DataFrame, strata:list, extra_numerator_strata=None, broadcast_cols=None)-> pd.DataFrame: # or just numerator_broadcast instead of having two separate arguments
+def ratio(
+    numerator: pd.DataFrame,
+    denominator: pd.DataFrame,
+    strata: list,
+    multiplier=1,
+    numerator_broadcast=None,
+    dropna=False,
+)-> pd.DataFrame: # or just numerator_broadcast instead of having two separate arguments
+    """
+    Compute a ratio or rate by dividing the numerator by the denominator.
+
+    Parameters
+    ----------
+
+    numerator : DataFrame
+        The numerator data for the ratio or rate.
+
+    denominator : DataFrame
+        The denominator data for the ratio or rate.
+
+    strata : list of column names present in the numerator and denominator
+        The stratification variables for the ratio or rate.
+
+    multiplier : int or float, default 1
+        Multiplier for the numerator, typically a power of 10,
+        to adjust the units of the result. For example, if computing a ratio,
+        some multipliers with corresponding units are:
+        1 - proportion
+        100 - percent
+        1000 - per thousand
+        100_000 - per hundred thousand
+
+    numerator_broadcast : list of column names present in the numerator, or None
+        Additional columns in the numerator by which to stratify or broadcast.
+        Note that the population in the numerator must always be a subset of
+        the population in the denominator, so it only makes sense to include
+        addiional strata in the numerator.
+
+        For example, if 'sex' is included in `numerator_broadcast` but not `strata`,
+        then the resulting ratio can be interpreted as a joint distribution over sex,
+        and summing over the 'sex' column in the ratio would give the same result as
+        passing numerator_broadcast=None.
+
+        You can also pass columns to `numerator_broadcast` to do muliple computations
+        at the same time. E.g. pass 'cause' to compute a ratio or rate for multiple causes
+        at once, or pass 'measure' to compute a ratio or rate for multiple measures at
+        once (like deaths, ylls, and ylds).
+
+    dropna : boolean, default False
+         Whether to drop rows with NaN values in the result, namely
+         if division by 0 occurs because of an empty stratum in the denominator.
+
+     Returns
+     -------
+     rate_or_ratio : DataFrame
+         The rate or ratio data = numerator / denominator.
+    """
     index_cols = INDEX_COLUMNS
 
-    if extra_numerator_strata is None:
-        extra_numerator_strata = []
+    if numerator_broadcast is None:
+        numerator_broadcast = []
 
-    if broadcast_cols is None:
-        broadcast_cols = []
-
-    numerator = numerator.groupby(strata+index_cols+extra_numerator_strata+broadcast_cols)[VALUE_COLUMN].sum()
+    numerator = numerator.groupby(strata+index_cols+numerator_broadcast)[VALUE_COLUMN].sum()
     denominator = denominator.groupby(strata+index_cols)[VALUE_COLUMN].sum()
 
-    rate_or_ratio = numerator / denominator
+    ratio = (numerator / denominator) * multiplier
 
-    return rate_or_ratio.reset_index()
+    # If dropna is True, drop rows where we divided by 0
+    if dropna:
+        rate_or_ratio.dropna(inplace=True)
+
+    return ratio.reset_index()
 
 def averted(measure, baseline_scenario, scenario_col=None):
     """
@@ -232,7 +289,8 @@ def difference(measure:pd.DataFrame, identifier_col:str, minuend_id=None, subtra
         subtrahend.set_index(identifier_col, append=True)
 
     # Subtract DataFrames, not Series, because Series will drop the identifier column from the index
-    # if there is no broadcasting.
+    # if there is no broadcasting. (Behavior for Series and DataFrames is different - is this a
+    # feature or a bug in pandas?)
     difference = minuend[[VALUE_COLUMN]] - subtrahend[[VALUE_COLUMN]]
     difference = difference.reset_index()
 
