@@ -91,39 +91,6 @@ def ratio(
 
     return ratio.reset_index()
 
-def averted(measure: pd.DataFrame, baseline_scenario: str, scenario_col=None):
-    """
-    Compute an "averted" measure (e.g. DALYs) or measures by subtracting
-    the intervention value from the baseline value.
-    
-    Parameters
-    ----------
-    
-    measure : DataFrame
-        DataFrame containing both the baseline and intervention data.
-        
-    baseline_scenario : scalar, typically str
-        The name or other identifier for the baseline scenario in the
-        `scenario_col` column of the `measure` DataFrame.
-        
-    scenario_col : str, default None
-        The name of the scenario column in the `measure` DataFrame.
-        Defaults to the global parameter SCENARIO_COLUMN if None is passed.
-        
-    Returns
-    -------
-    
-    averted : DataFrame
-        The averted measure(s) = baseline - intervention
-    """
-    
-    scenario_col = SCENARIO_COLUMN if scenario_col is None else scenario_col
-    # Subtract intervention from baseline
-    averted = difference(measure, identifier_col=scenario_col, minuend_id=baseline_scenario)
-    # Insert a column after the scenario column to record what the baseline scenario was
-#     averted.insert(averted.columns.get_loc(scenario_col)+1, 'relative_to', baseline_scenario)
-    return averted
-
 def difference(measure:pd.DataFrame, identifier_col:str, minuend_id=None, subtrahend_id=None)->pd.DataFrame:
     """
     Returns the difference of a measure stored in the measure DataFrame, where the
@@ -170,6 +137,39 @@ def difference(measure:pd.DataFrame, identifier_col:str, minuend_id=None, subtra
     difference.insert(difference.columns.get_loc(identifier_col)+1, colname, value)
 
     return difference
+
+def averted(measure: pd.DataFrame, baseline_scenario: str, scenario_col=None):
+    """
+    Compute an "averted" measure (e.g. DALYs) or measures by subtracting
+    the intervention value from the baseline value.
+
+    Parameters
+    ----------
+
+    measure : DataFrame
+        DataFrame containing both the baseline and intervention data.
+
+    baseline_scenario : scalar, typically str
+        The name or other identifier for the baseline scenario in the
+        `scenario_col` column of the `measure` DataFrame.
+
+    scenario_col : str, default None
+        The name of the scenario column in the `measure` DataFrame.
+        Defaults to the global parameter SCENARIO_COLUMN if None is passed.
+
+    Returns
+    -------
+
+    averted : DataFrame
+        The averted measure(s) = baseline - intervention
+    """
+
+    scenario_col = SCENARIO_COLUMN if scenario_col is None else scenario_col
+    # Subtract intervention from baseline
+    averted = difference(measure, identifier_col=scenario_col, minuend_id=baseline_scenario)
+    # Insert a column after the scenario column to record what the baseline scenario was
+#     averted.insert(averted.columns.get_loc(scenario_col)+1, 'relative_to', baseline_scenario)
+    return averted
 
 def describe(data, **describe_kwargs):
     """Wrapper function for DataFrame.describe() with `data` grouped by everything except draw and value."""
