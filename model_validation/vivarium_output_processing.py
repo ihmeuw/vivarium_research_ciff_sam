@@ -18,6 +18,46 @@ def set_global_index_columns(index_columns:list)->None:
     global INDEX_COLUMNS
     INDEX_COLUMNS = index_columns
 
+def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_index=True)->pd.DataFrame:
+    """Sum the values of a dataframe over the specified columns to marginalize out.
+
+    https://en.wikipedia.org/wiki/Marginal_distribution
+
+    Parameters
+    ----------
+
+    df: DataFrame
+        A dataframe with at least one "value" column to be aggregated, and additional "identifier" columns,
+        at least one of which is to be marginalized out. That is, the data in the "value" column(s) will be summed
+        over all catgories in the "marginalized" column(s). All columns in the dataframe are assumed to be either
+        "value" columns or "identifier" columns, and the columns to marginalize should be a subset of the
+        identifier columns.
+
+    martinalized_cols: single column label, list of column labels, or pd.Index object
+        The column(s) to sum over (i.e. marginalize)
+
+    value_cols: single column label, list of column labels, or pd.Index object
+        The column(s) in the dataframe that contain the values to sum
+
+    reset_index: bool
+        Whether to reset the dataframe's index after calling groupby().sum()
+
+    Returns
+    ------------
+    summed_data: DataFrame
+        DataFrame with the summed values, whose columns are the same as those in df except without `marginalized_cols`,
+        which have been aggregated over.
+        If reset_index == False, all the resulting columns will be placed in the DataFrame's index except for `value_cols`.
+    """
+    marginalized_cols = marginalized_cols if isinstance(marginalized_cols, (list, pd.Index)) else [marginalized_cols]
+    value_cols = value_cols if isinstance(value_cols, (list, pd.Index)) else [value_cols]
+    # Move MultiIndex levels into columns to enable passing index level names as well as column names
+#     df = df.reset_index([level_name for level_name in df.index.names if level_name is not None])
+    df = df.reset_index() if df.index.nlevels > 1 else df
+    index_cols = df.columns.difference([*marginalized_cols, *value_cols]).to_list()
+    summed_data = df.groupby(index_cols, observed=True)[value_cols].sum() # observed=True needed for Categorical data
+    return summed_data.reset_index() if reset_index else summed_data
+
 def ratio(
     numerator: pd.DataFrame,
     denominator: pd.DataFrame,
