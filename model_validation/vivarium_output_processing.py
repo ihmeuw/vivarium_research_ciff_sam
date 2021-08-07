@@ -25,7 +25,7 @@ def ratio(
     multiplier=1,
     numerator_broadcast=None,
     dropna=False,
-)-> pd.DataFrame: # or just numerator_broadcast instead of having two separate arguments
+)-> pd.DataFrame:
     """
     Compute a ratio or rate by dividing the numerator by the denominator.
 
