@@ -179,8 +179,8 @@ def ratio(
 
      Returns
      -------
-     rate_or_ratio : DataFrame
-         The rate or ratio data = numerator / denominator.
+     ratio : DataFrame
+         The ratio or rate data = numerator / denominator.
     """
     index_cols = INDEX_COLUMNS
 
@@ -194,7 +194,7 @@ def ratio(
 
     # If dropna is True, drop rows where we divided by 0
     if dropna:
-        rate_or_ratio.dropna(inplace=True)
+        ratio.dropna(inplace=True)
 
     return ratio.reset_index()
 
