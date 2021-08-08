@@ -130,11 +130,8 @@ def difference(measure:pd.DataFrame, identifier_col:str, minuend_id=None, subtra
     # Subtract DataFrames, not Series, because Series will drop the identifier column from the index
     # if there is no broadcasting. (Behavior for Series and DataFrames is different - is this a
     # feature or a bug in pandas?)
-    print(minuend.index.names)
-    print(subtrahend.index.names)
     difference = minuend[[VALUE_COLUMN]] - subtrahend[[VALUE_COLUMN]]
     difference = difference.reset_index()
-    print(difference.columns)
 
     # Add a column to specify what was subtracted from (the minuend) or what was subtracted (the subtrahend)
     colname, value = ('subtracted_from', minuend_id) if minuend_id is not None else ('subtracted_value', subtrahend_id)
