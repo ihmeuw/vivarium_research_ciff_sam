@@ -50,6 +50,7 @@ def _listify_singleton_cols(colnames, df):
     def method3(colnames, df):
         """Method 3: Assume that if colnames is a string or is a hashable object that is in the dataframe's columns
         (e.g. a tuple), then it represents a single column namee. Otherwise it must be an iterable of column names.
+        (This method allows tuples of column names.)
         """
         if isinstance(colnames, collections.Hashable):
             # This line could still raise an 'unhashable type' TypeError if e.g. colnames is a tuple
@@ -59,7 +60,7 @@ def _listify_singleton_cols(colnames, df):
             elif isinstance(colnames, str): # Assume colnames is supposed to be a single column name
                 raise KeyError(f"string {colnames} not in the DataFrame")
         elif not isinstance(colnames, collections.Iterable): # assume colname is an iterable of column names
-            raise ValueError(f"colnames must be a single column name in df or an iterable of column names")
+            raise ValueError(f"{colnames} must be a single column name in df or an iterable of column names")
         return colnames
 
     return method1(colnames, df) # Go with the most restrictive method for now
