@@ -105,6 +105,13 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_in
     summed_data = df.groupby(index_cols, observed=True)[value_cols].sum() # observed=True needed for Categorical data
     return summed_data.reset_index() if reset_index else summed_data
 
+def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True)->pd.DataFrame:
+    strata = _listify_singleton_cols(strata, df)
+    value_cols = _listify_singleton_cols(value_cols, df)
+    index_cols = [*strata, *INDEX_COLUMNS]
+    summed_data = df.groupby(index_cols, observed=True)[value_cols].sum()
+    return summed_data.reset_index() if reset_index else summed_data
+
 def ratio(
     numerator: pd.DataFrame,
     denominator: pd.DataFrame,
