@@ -122,18 +122,22 @@ def difference(measure:pd.DataFrame, identifier_col:str, minuend_id=None, subtra
     # Add the identifier column to the index of the larger dataframe
     # (or default to the subtrahend dataframe if neither needs broadcasting).
     if minuend_id is None:
-        minuend.set_index(identifier_col, append=True)
+        minuend.set_index(identifier_col, append=True, inplace=True)
     else:
-        subtrahend.set_index(identifier_col, append=True)
+        print(identifier_col)
+        subtrahend.set_index(identifier_col, append=True, inplace=True)
 
     # Subtract DataFrames, not Series, because Series will drop the identifier column from the index
     # if there is no broadcasting. (Behavior for Series and DataFrames is different - is this a
     # feature or a bug in pandas?)
+    print(minuend.index.names)
+    print(subtrahend.index.names)
     difference = minuend[[VALUE_COLUMN]] - subtrahend[[VALUE_COLUMN]]
     difference = difference.reset_index()
+    print(difference.columns)
 
     # Add a column to specify what was subtracted from (the minuend) or what was subtracted (the subtrahend)
-    colname, value = 'subtracted_from', minuend_id if minuend_id is not None else 'subtracted_value', subtrahend_id
+    colname, value = ('subtracted_from', minuend_id) if minuend_id is not None else ('subtracted_value', subtrahend_id)
     difference.insert(difference.columns.get_loc(identifier_col)+1, colname, value)
 
     return difference
