@@ -1,4 +1,5 @@
 import pandas as pd
+import collections
 
 VALUE_COLUMN = 'value'
 DRAW_COLUMN  = 'input_draw'
@@ -17,6 +18,51 @@ def set_global_index_columns(index_columns:list)->None:
     """
     global INDEX_COLUMNS
     INDEX_COLUMNS = index_columns
+
+def _listify_singleton_cols(colnames, df):
+    """Wrap a single column name in a list, or return colnames unaltered if it's already a list of column names."""
+
+    def method1(colnames, df):
+        """Method 1 (doesn't depend on df): Assume that if colnames has a type that is in a whitelist of
+        allowed ierable types, then it is an iterable of column names, and otherwise it must be a single
+        column name.
+        """
+        if not isinstance(colnames, (list, pd.Index)):
+            colnames = [colnames]
+        return colnames
+
+    def method2(colnames, df):
+        """Method 2: Assume that if colnames is hashable it represents a single column name,
+        and otherwise it must be an iterable of column names. (This method doesn't allow tuples of column
+        names since tuples are hashable.)
+        """
+        if isinstance(colnames, collections.Hashable):
+            # This line could still raise an 'unhashable type' TypeError if e.g. colnames is a tuple
+            # that contains an unhashable type
+            if colnames in df: # assume colnames is a single column name in df
+                colnames = [colnames]
+            else: # Assume colnames is supposed to be a single column name
+                raise KeyError(f"Key {colnames} not in the DataFrame")
+        elif not isinstance(colnames, collections.Iterable): # assume colname is an iterable of column names
+            raise ValueError(f"{colnames} must be a single column name in df or an iterable of column names")
+        return colnames
+
+    def method3(colnames, df):
+        """Method 3: Assume that if colnames is a string or is a hashable object that is in the dataframe's columns
+        (e.g. a tuple), then it represents a single column namee. Otherwise it must be an iterable of column names.
+        """
+        if isinstance(colnames, collections.Hashable):
+            # This line could still raise an 'unhashable type' TypeError if e.g. colnames is a tuple
+            # that contains an unhashable type
+            if colnames in df: # assume colnames is a single column name in df
+                colnames = [colnames]
+            elif isinstance(colnames, str): # Assume colnames is supposed to be a single column name
+                raise KeyError(f"string {colnames} not in the DataFrame")
+        elif not isinstance(colnames, collections.Iterable): # assume colname is an iterable of column names
+            raise ValueError(f"colnames must be a single column name in df or an iterable of column names")
+        return colnames
+
+    return method1(colnames, df)
 
 def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_index=True)->pd.DataFrame:
     """Sum the values of a dataframe over the specified columns to marginalize out.
@@ -49,9 +95,8 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_in
         which have been aggregated over.
         If reset_index == False, all the resulting columns will be placed in the DataFrame's index except for `value_cols`.
     """
-    # TOODO: Write a separate function to turn singletons into lists if necessary, instead of copying code
-    marginalized_cols = marginalized_cols if isinstance(marginalized_cols, (list, pd.Index)) else [marginalized_cols]
-    value_cols = value_cols if isinstance(value_cols, (list, pd.Index)) else [value_cols]
+    marginalized_cols = _listify_singleton_cols(marginalized_cols, df)
+    value_cols = _listify_singleton_cols(value_cols, df)
     # Move MultiIndex levels into columns to enable passing index level names as well as column names
 #     df = df.reset_index([level_name for level_name in df.index.names if level_name is not None])
     df = df.reset_index() if df.index.nlevels > 1 else df
