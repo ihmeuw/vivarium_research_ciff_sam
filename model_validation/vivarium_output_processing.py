@@ -62,7 +62,7 @@ def _listify_singleton_cols(colnames, df):
             raise ValueError(f"colnames must be a single column name in df or an iterable of column names")
         return colnames
 
-    return method1(colnames, df)
+    return method1(colnames, df) # Go with the most restrictive method for now
 
 def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_index=True)->pd.DataFrame:
     """Sum the values of a dataframe over the specified columns to marginalize out.
