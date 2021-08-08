@@ -97,9 +97,9 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_in
     """
     marginalized_cols = _listify_singleton_cols(marginalized_cols, df)
     value_cols = _listify_singleton_cols(value_cols, df)
-    # Move MultiIndex levels into columns to enable passing index level names as well as column names
-#     df = df.reset_index([level_name for level_name in df.index.names if level_name is not None])
-    df = df.reset_index() if df.index.nlevels > 1 else df
+    # Move Index levels into columns to enable passing index level names as well as column names to marginalize
+    if df.index.nlevels > 1 or df.index.name in marginalized_cols:
+        df = df.reset_index()
     index_cols = df.columns.difference([*marginalized_cols, *value_cols]).to_list()
     summed_data = df.groupby(index_cols, observed=True)[value_cols].sum() # observed=True needed for Categorical data
     return summed_data.reset_index() if reset_index else summed_data
