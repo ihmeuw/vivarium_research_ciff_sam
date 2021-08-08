@@ -24,7 +24,7 @@ def _listify_singleton_cols(colnames, df):
 
     def method1(colnames, df):
         """Method 1 (doesn't depend on df): Assume that if colnames has a type that is in a whitelist of
-        allowed ierable types, then it is an iterable of column names, and otherwise it must be a single
+        allowed iterable types, then it is an iterable of column names, and otherwise it must be a single
         column name.
         """
         if not isinstance(colnames, (list, pd.Index)):
