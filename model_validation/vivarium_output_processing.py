@@ -124,7 +124,6 @@ def difference(measure:pd.DataFrame, identifier_col:str, minuend_id=None, subtra
     if minuend_id is None:
         minuend.set_index(identifier_col, append=True, inplace=True)
     else:
-        print(identifier_col)
         subtrahend.set_index(identifier_col, append=True, inplace=True)
 
     # Subtract DataFrames, not Series, because Series will drop the identifier column from the index
