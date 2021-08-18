@@ -106,6 +106,48 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_in
     return summed_data.reset_index() if reset_index else summed_data
 
 def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True)->pd.DataFrame:
+    """Sum the values of the dataframe so that the reult is stratified by the specified strata.
+
+    https://en.wikipedia.org/wiki/Stratification_(clinical_trials)
+
+    More specifically, `stratify` groups `df` by the stratification columns and sums the value columns,
+    but automatically adds INDEX_COLS (usually DRAW_COLUMN and SCENARIO_COLUMN) to the `by` parameter
+    of the groupby. That is, the return value is df.groupby(strata+INDEX_COLS)[value_cols].sum()
+
+    The `marginalize` and `stratify` functions are complementary in that the two functions do the same thing
+    (sum values of the dataframe), but the specified columns are opposite:
+        For `marginalize` you specify the marginalized columns you want to sum over, whereas
+        for `stratify` you specify the stratification columns that you want to keep un-summed.
+
+    Parameters
+    ----------
+
+    df: DataFrame
+        A dataframe with at least one "value" column to be aggregated, and additional "identifier" columns
+        which must include those listed in INDEX_COLS and potentially other columns to stratify by.
+        That is, the data in the "value" column(s) will be summed over all catgories in the identifier
+        column except those in `strata` and INDEX_COLS. All columns in the dataframe are assumed to be either
+        "value" columns or "identifier" columns, and the columns to stratify by should be a subset of the
+        identifier columns.
+
+    strata: single column label, list of column labels, or pd.Index object
+        The column(s) to stratify by (i.e. group by before summing)
+
+    value_cols: single column label, list of column labels, or pd.Index object
+        The column(s) in the dataframe that contain the values to sum
+
+    reset_index: bool
+        Whether to reset the dataframe's index after calling groupby().sum()
+
+    Returns
+    ------------
+
+    summed_data: DataFrame
+        DataFrame with the summed values, whose columns are the columns listed in `strata` and INDEX_COLS
+        (usually DRAW_COLUMN and SCENARIO_COLUMN), with all other columns being marginalized out.
+        If reset_index == False, all the resulting columns will be placed in the DataFrame's index except
+        for `value_cols`.
+    """
     strata = _listify_singleton_cols(strata, df)
     value_cols = _listify_singleton_cols(value_cols, df)
     index_cols = [*strata, *INDEX_COLUMNS]
