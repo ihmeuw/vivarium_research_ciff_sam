@@ -70,6 +70,12 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_in
 
     https://en.wikipedia.org/wiki/Marginal_distribution
 
+    The `marginalize` and `stratify` functions are complementary in that the two functions do the same thing
+    (sum values of a dataframe over a subset of the dataframe's columns), but the specified columns
+    in the second argument of the two functions are opposites:
+        For `marginalize` you specify the marginalized columns you want to sum over, whereas
+        for `stratify` you specify the stratification columns that you want to keep un-summed.
+
     Parameters
     ----------
 
@@ -115,7 +121,8 @@ def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True
     of the groupby. That is, the return value is df.groupby(strata+INDEX_COLS)[value_cols].sum()
 
     The `marginalize` and `stratify` functions are complementary in that the two functions do the same thing
-    (sum values of the dataframe), but the specified columns are opposite:
+    (sum values of a dataframe over a subset of the dataframe's columns),but the specified columns
+    in the second argument of the two functions are opposites:
         For `marginalize` you specify the marginalized columns you want to sum over, whereas
         for `stratify` you specify the stratification columns that you want to keep un-summed.
 
