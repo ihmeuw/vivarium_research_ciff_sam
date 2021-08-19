@@ -65,7 +65,7 @@ def _listify_singleton_cols(colnames, df):
 
     return method1(colnames, df) # Go with the most restrictive method for now
 
-def marginalize(df:pd.DataFrame, marginalized_cols, value_cols='value', reset_index=True)->pd.DataFrame:
+def marginalize(df:pd.DataFrame, marginalized_cols, value_cols=VALUE_COLUMN, reset_index=True)->pd.DataFrame:
     """Sum the values of a dataframe over the specified columns to marginalize out.
 
     https://en.wikipedia.org/wiki/Marginal_distribution
