@@ -222,9 +222,15 @@ def ratio(
 
     if numerator_broadcast is None:
         numerator_broadcast = []
+    else:
+        numerator_broadcast = _listify_singleton_cols(numerator_broadcast, numerator)
 
-    numerator = numerator.groupby(strata+index_cols+numerator_broadcast)[VALUE_COLUMN].sum()
-    denominator = denominator.groupby(strata+index_cols)[VALUE_COLUMN].sum()
+    strata = _listify_singleton_cols(strata, denominator)
+    numerator = stratify(numerator, strata+numerator_broadcast, reset_index=False)
+    denominator = stratify(denominator, strata, reset_index=False)
+
+#     numerator = numerator.groupby(strata+index_cols+numerator_broadcast)[VALUE_COLUMN].sum()
+#     denominator = denominator.groupby(strata+index_cols)[VALUE_COLUMN].sum()
 
     ratio = (numerator / denominator) * multiplier
 
