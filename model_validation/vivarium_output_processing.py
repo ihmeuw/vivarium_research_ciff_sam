@@ -167,6 +167,7 @@ def ratio(
     strata: list,
     multiplier=1,
     numerator_broadcast=None,
+    denominator_broadcast=None,
     dropna=False,
 )-> pd.DataFrame:
     """
@@ -225,9 +226,14 @@ def ratio(
     else:
         numerator_broadcast = _listify_singleton_cols(numerator_broadcast, numerator)
 
+    if denominator_broadcast is None:
+        denominator_broadcast = []
+    else:
+        denominator_broadcast = _listify_singleton_cols(denominator_broadcast, denominator)
+
     strata = _listify_singleton_cols(strata, denominator)
     numerator = stratify(numerator, strata+numerator_broadcast, reset_index=False)
-    denominator = stratify(denominator, strata, reset_index=False)
+    denominator = stratify(denominator, strata+denominator_broadcast, reset_index=False)
 
 #     numerator = numerator.groupby(strata+index_cols+numerator_broadcast)[VALUE_COLUMN].sum()
 #     denominator = denominator.groupby(strata+index_cols)[VALUE_COLUMN].sum()
