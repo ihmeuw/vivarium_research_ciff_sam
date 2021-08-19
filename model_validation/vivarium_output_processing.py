@@ -169,6 +169,7 @@ def ratio(
     numerator_broadcast=None,
     denominator_broadcast=None,
     dropna=False,
+    reset_index=True,
 )-> pd.DataFrame:
     """
     Compute a ratio or rate by dividing the numerator by the denominator.
@@ -244,7 +245,10 @@ def ratio(
     if dropna:
         ratio.dropna(inplace=True)
 
-    return ratio.reset_index()
+    if reset_index:
+        ratio.reset_index(inplace=True)
+
+    return ratio
 
 def difference(measure:pd.DataFrame, identifier_col:str, minuend_id=None, subtrahend_id=None)->pd.DataFrame:
     """
