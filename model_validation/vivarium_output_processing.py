@@ -4,6 +4,7 @@ import collections
 VALUE_COLUMN = 'value'
 DRAW_COLUMN  = 'input_draw'
 SCENARIO_COLUMN = 'scenario'
+MEASURE_COLUMN = 'measure'
 
 INDEX_COLUMNS = [DRAW_COLUMN, SCENARIO_COLUMN]
 
@@ -169,6 +170,7 @@ def ratio(
     numerator_broadcast=None,
     denominator_broadcast=None,
     dropna=False,
+    record_inputs=None,
     reset_index=True,
 )-> pd.DataFrame:
     """
@@ -232,6 +234,15 @@ def ratio(
     else:
         denominator_broadcast = _listify_singleton_cols(denominator_broadcast, denominator)
 
+    if record_inputs is None:
+        record_inputs = reset_index
+
+    if record_inputs:
+        # Really I think the 'measure' column should always have a unique value, but
+        # currently that is not the case for transition counts...
+        numerator_measure = '|'.join([measure for measure in numerator[MEASURE_COLUMN].unique()])
+        denominator_measure = '|'.join([measure for measure in denominator[MEASURE_COLUMN].unique()])
+
     strata = _listify_singleton_cols(strata, denominator)
     numerator = stratify(numerator, strata+numerator_broadcast, reset_index=False)
     denominator = stratify(denominator, strata+denominator_broadcast, reset_index=False)
@@ -244,6 +255,11 @@ def ratio(
     # If dropna is True, drop rows where we divided by 0
     if dropna:
         ratio.dropna(inplace=True)
+
+    if record_inputs:
+        ratio[f'numerator_{MEASURE_COLUMN}'] = numerator_measure
+        ratio[f'denominator_{MEASURE_COLUMN}'] = denominator_measure
+        ratio['multiplier'] = multiplier
 
     if reset_index:
         ratio.reset_index(inplace=True)
