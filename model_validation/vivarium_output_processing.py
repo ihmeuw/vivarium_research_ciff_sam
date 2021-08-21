@@ -222,8 +222,6 @@ def ratio(
      ratio : DataFrame
          The ratio or rate data = numerator / denominator.
     """
-    index_cols = INDEX_COLUMNS
-
     if numerator_broadcast is None:
         numerator_broadcast = []
     else:
@@ -246,9 +244,6 @@ def ratio(
     strata = _listify_singleton_cols(strata, denominator)
     numerator = stratify(numerator, strata+numerator_broadcast, reset_index=False)
     denominator = stratify(denominator, strata+denominator_broadcast, reset_index=False)
-
-#     numerator = numerator.groupby(strata+index_cols+numerator_broadcast)[VALUE_COLUMN].sum()
-#     denominator = denominator.groupby(strata+index_cols)[VALUE_COLUMN].sum()
 
     ratio = (numerator / denominator) * multiplier
 
