@@ -170,6 +170,7 @@ def ratio(
     numerator_broadcast=None,
     denominator_broadcast=None,
     value_cols=VALUE_COLUMN,
+    measure_col=MEASURE_COLUMN,
     dropna=False,
     record_inputs=None,
     reset_index=True,
@@ -239,8 +240,8 @@ def ratio(
     if record_inputs:
         # Really I think the 'measure' column should always have a unique value, but
         # currently that is not the case for transition counts...
-        numerator_measure = '|'.join(numerator[MEASURE_COLUMN].unique())
-        denominator_measure = '|'.join(denominator[MEASURE_COLUMN].unique())
+        numerator_measure = '|'.join(numerator[measure_col].unique())
+        denominator_measure = '|'.join(denominator[measure_col].unique())
 
     # Ensure strata is a list so it can be concatenated with broadcast columns
     strata = _listify_singleton_cols(strata, denominator)
@@ -255,8 +256,8 @@ def ratio(
         ratio.dropna(inplace=True)
 
     if record_inputs:
-        ratio[f'numerator_{MEASURE_COLUMN}'] = numerator_measure
-        ratio[f'denominator_{MEASURE_COLUMN}'] = denominator_measure
+        ratio[f'numerator_{measure_col}'] = numerator_measure
+        ratio[f'denominator_{measure_col}'] = denominator_measure
         ratio['multiplier'] = multiplier
 
     if reset_index:
