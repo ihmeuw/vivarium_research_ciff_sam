@@ -224,7 +224,7 @@ def ratio(
      ratio : DataFrame
          The ratio or rate data = numerator / denominator.
     """
-    # Ensure that numerator_broadcast and denominator_broadcast are lists
+    # Ensure that numerator_broadcast and denominator_broadcast are iterables of column names
     if numerator_broadcast is None:
         numerator_broadcast = []
     else:
@@ -252,11 +252,11 @@ def ratio(
         numerator_measure = '|'.join(numerator[measure_col].unique())
         denominator_measure = '|'.join(denominator[measure_col].unique())
 
-    # Ensure strata is a list so it can be concatenated with broadcast columns
+    # Ensure strata is an iterable of column names so it can be concatenated with broadcast columns
     strata = _listify_singleton_cols(strata, denominator)
     # Stratify numerator and denominator with broadcast columns included
-    numerator = stratify(numerator, strata+numerator_broadcast, value_cols=value_cols, reset_index=False)
-    denominator = stratify(denominator, strata+denominator_broadcast, value_cols=value_cols, reset_index=False)
+    numerator = stratify(numerator, [*strata, *numerator_broadcast], value_cols=value_cols, reset_index=False)
+    denominator = stratify(denominator, [*strata, *denominator_broadcast], value_cols=value_cols, reset_index=False)
 
     # Compute the ratio
     ratio = (numerator / denominator) * multiplier
