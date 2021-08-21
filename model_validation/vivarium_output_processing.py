@@ -165,10 +165,11 @@ def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True
 def ratio(
     numerator: pd.DataFrame,
     denominator: pd.DataFrame,
-    strata: list,
+    strata,
     multiplier=1,
     numerator_broadcast=None,
     denominator_broadcast=None,
+    value_cols=VALUE_COLUMN,
     dropna=False,
     record_inputs=None,
     reset_index=True,
@@ -241,9 +242,11 @@ def ratio(
         numerator_measure = '|'.join(numerator[MEASURE_COLUMN].unique())
         denominator_measure = '|'.join(denominator[MEASURE_COLUMN].unique())
 
+    # Ensure strata is a list so it can be concatenated with broadcast columns
     strata = _listify_singleton_cols(strata, denominator)
-    numerator = stratify(numerator, strata+numerator_broadcast, reset_index=False)
-    denominator = stratify(denominator, strata+denominator_broadcast, reset_index=False)
+    # Stratify numerator and denominator with broadcast columns included
+    numerator = stratify(numerator, strata+numerator_broadcast, value_cols=value_cols, reset_index=False)
+    denominator = stratify(denominator, strata+denominator_broadcast, value_cols=value_cols, reset_index=False)
 
     ratio = (numerator / denominator) * multiplier
 
