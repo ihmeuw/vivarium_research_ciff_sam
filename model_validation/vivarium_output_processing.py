@@ -224,6 +224,7 @@ def ratio(
      ratio : DataFrame
          The ratio or rate data = numerator / denominator.
     """
+    # Ensure that numerator_broadcast and denominator_broadcast are lists
     if numerator_broadcast is None:
         numerator_broadcast = []
     else:
@@ -234,6 +235,14 @@ def ratio(
     else:
         denominator_broadcast = _listify_singleton_cols(denominator_broadcast, denominator)
 
+    # Avoid potential confusion by requiring common stratification columns to go in strata.
+    if len(set(numerator_broadcast) & set(denominator_broadcast)) > 0:
+        raise ValueError(
+            "`numerator_broadcast` and `denominator_broadcast` must be disjoint lists of column names."
+            " Any column to include in both the numerator and denominator should go in `strata`."
+        )
+
+    # Default behavior is to record inputs only if index is reset
     if record_inputs is None:
         record_inputs = reset_index
 
@@ -249,6 +258,7 @@ def ratio(
     numerator = stratify(numerator, strata+numerator_broadcast, value_cols=value_cols, reset_index=False)
     denominator = stratify(denominator, strata+denominator_broadcast, value_cols=value_cols, reset_index=False)
 
+    # Compute the ratio
     ratio = (numerator / denominator) * multiplier
 
     # If dropna is True, drop rows where we divided by 0
