@@ -240,8 +240,8 @@ def ratio(
     if record_inputs:
         # Really I think the 'measure' column should always have a unique value, but
         # currently that is not the case for transition counts...
-        numerator_measure = '|'.join([measure for measure in numerator[MEASURE_COLUMN].unique()])
-        denominator_measure = '|'.join([measure for measure in denominator[MEASURE_COLUMN].unique()])
+        numerator_measure = '|'.join(numerator[MEASURE_COLUMN].unique())
+        denominator_measure = '|'.join(denominator[MEASURE_COLUMN].unique())
 
     strata = _listify_singleton_cols(strata, denominator)
     numerator = stratify(numerator, strata+numerator_broadcast, reset_index=False)
