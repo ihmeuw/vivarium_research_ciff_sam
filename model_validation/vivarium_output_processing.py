@@ -169,7 +169,7 @@ def ratio(
     multiplier=1,
     numerator_broadcast=None,
     denominator_broadcast=None,
-    value_cols=VALUE_COLUMN,
+    value_col=VALUE_COLUMN,
     measure_col=MEASURE_COLUMN,
     dropna=False,
     record_inputs=None,
@@ -187,7 +187,7 @@ def ratio(
     denominator : DataFrame
         The denominator data for the ratio or rate.
 
-    strata : list of column names present in the numerator and denominator
+    strata : list of column names present in the numerator and denominator (also accepts a single column name)
         The stratification variables for the ratio or rate.
 
     multiplier : int or float, default 1
@@ -215,9 +215,30 @@ def ratio(
         at once, or pass 'measure' to compute a ratio or rate for multiple measures at
         once (like deaths, ylls, and ylds).
 
+    denominator_broadcast : list of column names present in the denominator, or None
+        Additional columns in the numerator by which to broadcast.
+
+    value_col : single column name (a singleton list is also accepted), default VALUE_COLUMN
+        The column where the values in the numerator and denominator dataframes are stored.
+
+    measure_col: single column name (a singleton list is also accepted), default MEASURE_COLUMN
+        The column indicating the type of measure stored in the numerator and denominator dataframes.
+        Not used if `record_inputs` is False.
+
     dropna : boolean, default False
          Whether to drop rows with NaN values in the result, namely
          if division by 0 occurs because of an empty stratum in the denominator.
+
+    record_inputs : boolean or None, default None
+        Whether to record the multiplier and the numeraor's and denominator's measures in the output.
+        If None, defaults to the value of `reset_index` to facilitate performing further operations with
+        the ratio if reset_index == False.
+
+    reset_index : boolean, default True
+        Whether to move index levels back into the dataframe's columns after computing the ratio.
+        If reset_index==False and record_inputs==False, the only column of the returned dataframe
+        will be `value_col`, which can facilitate performing further operations on the ratio (e.g.
+        multiplying by a constant or combining with another dataframe that has the same index).
 
      Returns
      -------
@@ -255,8 +276,8 @@ def ratio(
     # Ensure strata is an iterable of column names so it can be concatenated with broadcast columns
     strata = _listify_singleton_cols(strata, denominator)
     # Stratify numerator and denominator with broadcast columns included
-    numerator = stratify(numerator, [*strata, *numerator_broadcast], value_cols=value_cols, reset_index=False)
-    denominator = stratify(denominator, [*strata, *denominator_broadcast], value_cols=value_cols, reset_index=False)
+    numerator = stratify(numerator, [*strata, *numerator_broadcast], value_cols=value_col, reset_index=False)
+    denominator = stratify(denominator, [*strata, *denominator_broadcast], value_cols=value_col, reset_index=False)
 
     # Compute the ratio
     ratio = (numerator / denominator) * multiplier
