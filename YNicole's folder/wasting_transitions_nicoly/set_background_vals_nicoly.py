@@ -13,7 +13,7 @@ mort = pd.read_csv('/ihme/homes/nicoly/vivarium_research_ciff/wasting_transition
 # wasting exposures
 
 #pulling from artifact - how to pull centrally from GBD? 
-art = Artifact('/ihme/costeffectiveness/artifacts/vivarium_ciff_sam/ethiopia.hdf', filter_terms=['year_start == 2019', 'age_start <  0.076712', f'age_end <= 5'])
+art = Artifact('/ihme/costeffectiveness/artifacts/vivarium_ciff_sam/ethiopia.hdf', filter_terms=['year_start == 2020', 'age_start <  0.076712', f'age_end <= 5'])
 art_wasting_exp = art.load('risk_factor.child_wasting.exposure').reset_index()
 
 art_wasting_exp['mean_value'] = art_wasting_exp.iloc[:,['draw' in i for i in art_wasting_exp.columns]].mean(axis=1)

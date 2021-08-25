@@ -7,13 +7,13 @@ from vivarium import Artifact
 # we solved in terms of arbitrary ds, ps, and fs, but for a specific age_group/sex, we can plug these in from GBD.
 # pulling that data here:
 
-#exposure stratified mortality rates
-mort = pd.read_csv('/ihme/homes/beatrixh/vivarium_research_ciff/wasting_transitions/cat_strat_mort_2021_07_13.csv')
+#exposure stratified mortality rates #UPDATE THIS TO YOUR OWN HOME DRIVE
+mort = pd.read_csv('/ihme/homes/nicoly/vivarium_research_ciff_sam/wasting_transitions/cat_strat_mort_2021_07_13.csv')
 
 # wasting exposures
 
-#pulling from artifact - how to pull centrally from GBD? 
-art = Artifact('/ihme/costeffectiveness/artifacts/vivarium_ciff_sam/ethiopia.hdf', filter_terms=['year_start == 2019', 'age_start <  0.076712', f'age_end <= 5'])
+#pulling from artifact - how to pull centrally from GBD? UPDATE THIS TO 2020
+art = Artifact('/ihme/costeffectiveness/artifacts/vivarium_ciff_sam/ethiopia.hdf', filter_terms=['year_start == 2020', 'age_start <  0.076712', f'age_end <= 5'])
 art_wasting_exp = art.load('risk_factor.child_wasting.exposure').reset_index()
 
 art_wasting_exp['mean_value'] = art_wasting_exp.iloc[:,['draw' in i for i in art_wasting_exp.columns]].mean(axis=1)
@@ -28,7 +28,7 @@ acmr_df = go(
     cause_id=294, #all causes
     location_id=179, 
     metric_id=3, 
-    year_id=2019, 
+    year_id=2019, # NEED TO UPDATE TO 2020 WHEN AVAILABLE!!!
     age_group_id=[4,5], 
     measure_id=1, 
     sex_id=[1,2,3], 
