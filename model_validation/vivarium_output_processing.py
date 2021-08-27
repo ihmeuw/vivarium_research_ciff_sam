@@ -4,6 +4,7 @@ import collections
 VALUE_COLUMN = 'value'
 DRAW_COLUMN  = 'input_draw'
 SCENARIO_COLUMN = 'scenario'
+MEASURE_COLUMN = 'measure'
 
 INDEX_COLUMNS = [DRAW_COLUMN, SCENARIO_COLUMN]
 
@@ -164,10 +165,15 @@ def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True
 def ratio(
     numerator: pd.DataFrame,
     denominator: pd.DataFrame,
-    strata: list,
+    strata,
     multiplier=1,
     numerator_broadcast=None,
+    denominator_broadcast=None,
+    value_col=VALUE_COLUMN,
+    measure_col=MEASURE_COLUMN,
     dropna=False,
+    record_inputs=None,
+    reset_index=True,
 )-> pd.DataFrame:
     """
     Compute a ratio or rate by dividing the numerator by the denominator.
@@ -181,7 +187,7 @@ def ratio(
     denominator : DataFrame
         The denominator data for the ratio or rate.
 
-    strata : list of column names present in the numerator and denominator
+    strata : list of column names present in the numerator and denominator (also accepts a single column name)
         The stratification variables for the ratio or rate.
 
     multiplier : int or float, default 1
@@ -209,30 +215,86 @@ def ratio(
         at once, or pass 'measure' to compute a ratio or rate for multiple measures at
         once (like deaths, ylls, and ylds).
 
+    denominator_broadcast : list of column names present in the denominator, or None
+        Additional columns in the numerator by which to broadcast.
+
+    value_col : single column name (a singleton list is also accepted), default VALUE_COLUMN
+        The column where the values in the numerator and denominator dataframes are stored.
+
+    measure_col: single column name (a singleton list is also accepted), default MEASURE_COLUMN
+        The column indicating the type of measure stored in the numerator and denominator dataframes.
+        Not used if `record_inputs` is False.
+
     dropna : boolean, default False
          Whether to drop rows with NaN values in the result, namely
          if division by 0 occurs because of an empty stratum in the denominator.
+
+    record_inputs : boolean or None, default None
+        Whether to record the multiplier and the numeraor's and denominator's measures in the output.
+        If None, defaults to the value of `reset_index` to facilitate performing further operations with
+        the ratio if reset_index == False.
+
+    reset_index : boolean, default True
+        Whether to move index levels back into the dataframe's columns after computing the ratio.
+        If reset_index==False and record_inputs==False, the only column of the returned dataframe
+        will be `value_col`, which can facilitate performing further operations on the ratio (e.g.
+        multiplying by a constant or combining with another dataframe that has the same index).
 
      Returns
      -------
      ratio : DataFrame
          The ratio or rate data = numerator / denominator.
     """
-    index_cols = INDEX_COLUMNS
-
+    # Ensure that numerator_broadcast and denominator_broadcast are iterables of column names
     if numerator_broadcast is None:
         numerator_broadcast = []
+    else:
+        numerator_broadcast = _listify_singleton_cols(numerator_broadcast, numerator)
 
-    numerator = numerator.groupby(strata+index_cols+numerator_broadcast)[VALUE_COLUMN].sum()
-    denominator = denominator.groupby(strata+index_cols)[VALUE_COLUMN].sum()
+    if denominator_broadcast is None:
+        denominator_broadcast = []
+    else:
+        denominator_broadcast = _listify_singleton_cols(denominator_broadcast, denominator)
 
+    # Avoid potential confusion by requiring common stratification columns to go in strata.
+    if len(set(numerator_broadcast) & set(denominator_broadcast)) > 0:
+        raise ValueError(
+            "`numerator_broadcast` and `denominator_broadcast` must be disjoint lists of column names."
+            " Any column to include in both the numerator and denominator should go in `strata`."
+        )
+
+    # Default behavior is to record inputs only if index is reset
+    if record_inputs is None:
+        record_inputs = reset_index
+
+    if record_inputs:
+        # Really I think the 'measure' column should always have a unique value, but
+        # currently that is not the case for transition counts...
+        numerator_measure = '|'.join(numerator[measure_col].unique())
+        denominator_measure = '|'.join(denominator[measure_col].unique())
+
+    # Ensure strata is an iterable of column names so it can be concatenated with broadcast columns
+    strata = _listify_singleton_cols(strata, denominator)
+    # Stratify numerator and denominator with broadcast columns included
+    numerator = stratify(numerator, [*strata, *numerator_broadcast], value_cols=value_col, reset_index=False)
+    denominator = stratify(denominator, [*strata, *denominator_broadcast], value_cols=value_col, reset_index=False)
+
+    # Compute the ratio
     ratio = (numerator / denominator) * multiplier
 
     # If dropna is True, drop rows where we divided by 0
     if dropna:
         ratio.dropna(inplace=True)
 
-    return ratio.reset_index()
+    if record_inputs:
+        ratio[f'numerator_{measure_col}'] = numerator_measure
+        ratio[f'denominator_{measure_col}'] = denominator_measure
+        ratio['multiplier'] = multiplier
+
+    if reset_index:
+        ratio.reset_index(inplace=True)
+
+    return ratio
 
 def difference(measure:pd.DataFrame, identifier_col:str, minuend_id=None, subtrahend_id=None)->pd.DataFrame:
     """
