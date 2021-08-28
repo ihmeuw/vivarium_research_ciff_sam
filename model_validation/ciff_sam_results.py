@@ -53,6 +53,10 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
     Vivarium count data tables as object attributes and to store and manipulate additional tables
     computed from the raw data.
     """
+    @classmethod
+    def from_model_spec(cls, model_id, run_id=None):
+        return cls.from_directory(get_count_data_path(model_id, run_id))
+
     def __setitem__(self, key, value):
         setattr(self, key, value)
 
