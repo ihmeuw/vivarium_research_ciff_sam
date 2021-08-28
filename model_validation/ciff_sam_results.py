@@ -57,6 +57,10 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
     def from_model_spec(cls, model_id, run_id=None):
         return cls.from_directory(get_count_data_path(model_id, run_id))
 
+    @classmethod
+    def cleaned_from_model_spec(cls, model_id, run_id=None):
+        return cls(clean_transformed_data(cls.from_model_spec(model_id, run_id)))
+
     def __setitem__(self, key, value):
         setattr(self, key, value)
 
