@@ -7,6 +7,25 @@ import collections
 import pandas as pd
 from model_validation.vivarium_transformed_output import VivariumTransformedOutput
 
+class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping):
+    """Implementation of the MutableMapping abstract base class to conveniently store transformed
+    Vivarium count data tables as object attributes and to store and manipulate additional tables
+    computed from the raw data.
+    """
+    @classmethod
+    def from_model_spec(cls, model_id, run_id=None):
+        return cls.from_directory(get_count_data_path(model_id, run_id))
+
+    @classmethod
+    def cleaned_from_model_spec(cls, model_id, run_id=None):
+        return cls(clean_transformed_data(cls.from_model_spec(model_id, run_id)))
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def __delitem__(self, key):
+        del self.key
+
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
 models = pd.DataFrame(
@@ -47,25 +66,6 @@ def get_count_data_path(model_id, run_id=None, models_df=models):
 #         print(model_metadata, len(model_metadata), model_name,'\n',run_id)
     model_count_data_path = f'{project_results_directory}/{model_name}/ciff_sam/{run_id}/count_data/'
     return model_count_data_path
-
-class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping):
-    """Implementation of the MutableMapping abstract base class to conveniently store transformed
-    Vivarium count data tables as object attributes and to store and manipulate additional tables
-    computed from the raw data.
-    """
-    @classmethod
-    def from_model_spec(cls, model_id, run_id=None):
-        return cls.from_directory(get_count_data_path(model_id, run_id))
-
-    @classmethod
-    def cleaned_from_model_spec(cls, model_id, run_id=None):
-        return cls(clean_transformed_data(cls.from_model_spec(model_id, run_id)))
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-    def __delitem__(self, key):
-        del self.key
 
 def clean_transformed_data(data):
     """Reformat transformed count data to make more sense."""
