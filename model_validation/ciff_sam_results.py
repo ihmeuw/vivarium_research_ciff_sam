@@ -62,3 +62,35 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
 
     def __delitem__(self, key):
         del self.key
+
+def clean_transformed_data(data):
+    """Reformat transformed count data to make more sense."""
+    clean_data = VivariumMeasures(data)
+
+    # Define a function to make the transition count dataframes better
+    def clean_transition_df(df):
+        return (df
+                .assign(transition=lambda df: df['measure'].str.replace('_event_count', ''))
+                .assign(measure='transition_count')
+               )
+    # Make the wasting and disease transition count dataframes better
+    clean_data.update(
+        {table_name: clean_transition_df(table) for table_name, table in clean_data.items()
+         if table_name.endswith('transition_count')}
+    )
+
+    if 'wasting_state_person_time' in data:
+        # Rename mislabeled 'cause' column in `wasting_state_person_time`
+        wasting_state_person_time = data.wasting_state_person_time.rename(columns={'cause':'wasting_state'})
+        clean_data['wasting_state_person_time'] = wasting_state_person_time
+
+    if 'disease_state_person_time' in data:
+        # Rename poorly named 'cause' column in `disease_state_person_time` and add an actual cause column
+        disease_state_person_time = (
+            data.disease_state_person_time
+            .rename(columns={'cause':'cause_state'})
+            .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
+        )
+        clean_data['disease_state_person_time'] = disease_state_person_time
+
+    return clean_data
