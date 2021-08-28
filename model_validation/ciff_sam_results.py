@@ -68,9 +68,15 @@ def get_count_data_path(model_id, run_id=None, models_df=models):
     return model_count_data_path
 
 def clean_transformed_data(data):
-    """Reformat transformed count data to make more sense."""
-    clean_data = VivariumMeasures(data)
+    """Reformat transformed count data to make more sense.
 
+    Parameters
+    ----------
+    data: Mapping of table names to DataFrames
+        The transformed data tables to clean, from the CIFF SAM model.
+    """
+    # Create a VivariumMeasures object with the same tables stored in `data`
+    clean_data = VivariumMeasures(data)
     # Define a function to make the transition count dataframes better
     def clean_transition_df(df):
         return (df
@@ -82,19 +88,16 @@ def clean_transformed_data(data):
         {table_name: clean_transition_df(table) for table_name, table in data.items()
          if table_name.endswith('transition_count')}
     )
-
     if 'wasting_state_person_time' in data:
         # Rename mislabeled 'cause' column in `wasting_state_person_time`
         clean_data['wasting_state_person_time'] = (
-            data.wasting_state_person_time.rename(columns={'cause':'wasting_state'})
+            data['wasting_state_person_time'].rename(columns={'cause':'wasting_state'})
         )
-
     if 'disease_state_person_time' in data:
         # Rename poorly named 'cause' column in `disease_state_person_time` and add an actual cause column
         clean_data['disease_state_person_time'] = (
-            data.disease_state_person_time
+            data['disease_state_person_time']
             .rename(columns={'cause':'cause_state'})
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
-
     return clean_data
