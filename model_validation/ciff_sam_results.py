@@ -5,7 +5,7 @@ from the CIFF SAM model.
 
 import collections
 import pandas as pd
-from vivarium_transformed_output import VivariumTransformedOutput
+from model_validation.vivarium_transformed_output import VivariumTransformedOutput
 
 models = pd.DataFrame(
     [
@@ -16,3 +16,14 @@ models = pd.DataFrame(
     ],
     columns=['model_number', 'model_name', 'run_id']
 )
+
+class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping):
+    """Implementation of the MutableMapping abstract base class to conveniently store transformed
+    Vivarium count data tables as object attributes and to store and manipulate additional tables
+    computed from the raw data.
+    """
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def __delitem__(self, key):
+        del self.key
