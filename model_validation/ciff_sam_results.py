@@ -11,13 +11,49 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
     Vivarium count data tables as object attributes and to store and manipulate additional tables
     computed from the raw data.
+
+    See https://docs.python.org/3/library/collections.abc.html
+
+    Example usage:
+    --------------
+    count_data_path = (
+        '/ihme/costeffectiveness/results/vivarium_ciff_sam/'
+        'v2.3_wasting_birth_prevalence/ciff_sam/2021_07_26_17_14_31/count_data'
+    )
+    orig_data = VivariumTransformedOutput.from_directory(count_data_path) # Implements Mapping but not MutableMapping
+    data = VivariumMeasures(orig_data) # Copies the original data to an object implementing MutableMapping
+    data.table_names() # Displays available count_data tables for this model run
+    # Access the tables via object attributes:
+    data.deaths # deaths data table
+    data.wasting_state_person_time # wasting state person time table
     """
     @classmethod
     def from_model_spec(cls, model_id, run_id=None):
+        """Create a VivariumMeasures object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
+        (i.e. the folder name of the form 'yyyy_mm_dd_hh_mm_ss' indicating when the run was launched), using the
+        `get_count_data_path` function to get the path to the count_data for the specified model.
+
+        Example usage:
+        --------------
+        # This is a shortcut to creating an object equivalent to the one in the example from the class description
+        data = VivariumMeasures.from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
+        # data = VivariumMeasures.from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
+        data.table_names() # Displays available count_data tables for this model run
+        """
         return cls.from_directory(get_count_data_path(model_id, run_id))
 
     @classmethod
     def cleaned_from_model_spec(cls, model_id, run_id=None):
+        """Create a VivariumMeasures object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
+        (i.e. the folder name of the form 'yyyy_mm_dd_hh_mm_ss' indicating when the run was launched), with
+        the data tables reformatted using the `clean_transformed_data` function.
+
+        Example usage:
+        --------------
+        data = VivariumMeasures.cleaned_from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
+        # data = VivariumMeasures.cleaned_from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
+        data.table_names() # Displays available count_data tables for this model run
+        """
         return cls(clean_transformed_data(cls.from_model_spec(model_id, run_id)))
 
     def __setitem__(self, key, value):
@@ -30,6 +66,7 @@ project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
 models = pd.DataFrame(
     [
+        [2.3, 'v2.3_wasting_birth_prevalence', '2021_07_26_17_14_31'],
         [2.4, 'v2.4_corrected_fertility', '2021_08_03_15_08_32'],
         [2.5, 'v2.5_stunting', '2021_08_05_16_17_12'],
         [3.0, 'v3.0_sq_lns', '2021_08_16_17_54_19'],
