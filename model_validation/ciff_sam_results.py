@@ -6,6 +6,7 @@ from the CIFF SAM model.
 import collections
 import pandas as pd
 from model_validation.vivarium_transformed_output import VivariumTransformedOutput
+import model_validation.vivarium_output_processing as vop
 
 class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping):
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
@@ -138,3 +139,16 @@ def clean_transformed_data(data):
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
     return clean_data
+
+def get_all_ages_person_time(person_time):
+    """Compute all-ages person time from person time stratified by age."""
+    return vop.marginalize(person_time, 'age').assign(age='all_ages')[person_time.columns]
+
+def get_total_person_time(data, include_all_ages=False):
+    """Compute total person tyme by age from person-time stratified by wasting state."""
+    if not include_all_ages:
+        person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
+    else:
+        person_time = get_total_person_time(data, False)
+        person_time = person_time.append(get_all_ages_person_time(person_time), ignore_index=True)
+    return person_time
