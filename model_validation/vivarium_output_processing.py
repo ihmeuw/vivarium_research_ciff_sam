@@ -66,6 +66,13 @@ def _listify_singleton_cols(colnames, df):
 
     return method1(colnames, df) # Go with the most restrictive method for now
 
+def _ensure_columns_not_levels(df, column_list=None):
+    """Move Index levels into columns to enable passing index level names as well as column names."""
+    if column_list is None: column_list = []
+    if df.index.nlevels > 1 or df.index.name in column_list:
+        df = df.reset_index()
+    return df
+
 def marginalize(df:pd.DataFrame, marginalized_cols, value_cols=VALUE_COLUMN, reset_index=True)->pd.DataFrame:
     """Sum the values of a dataframe over the specified columns to marginalize out.
 
@@ -106,8 +113,7 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols=VALUE_COLUMN, res
     marginalized_cols = _listify_singleton_cols(marginalized_cols, df)
     value_cols = _listify_singleton_cols(value_cols, df)
     # Move Index levels into columns to enable passing index level names as well as column names to marginalize
-    if df.index.nlevels > 1 or df.index.name in marginalized_cols:
-        df = df.reset_index()
+    df = _ensure_columns_not_levels(df, marginalized_cols)
     index_cols = df.columns.difference([*marginalized_cols, *value_cols]).to_list()
     summed_data = df.groupby(index_cols, observed=True)[value_cols].sum() # observed=True needed for Categorical data
     return summed_data.reset_index() if reset_index else summed_data
