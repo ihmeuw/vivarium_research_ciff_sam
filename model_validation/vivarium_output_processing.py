@@ -382,10 +382,14 @@ def averted(measure: pd.DataFrame, baseline_scenario: str, scenario_col=None):
 #     averted.insert(averted.columns.get_loc(scenario_col)+1, 'relative_to', baseline_scenario)
     return averted
 
-def describe(data, **describe_kwargs):
-    """Wrapper function for DataFrame.describe() with `data` grouped by everything except draw and value."""
-    groupby_cols = [col for col in data.columns if col not in [DRAW_COLUMN, VALUE_COLUMN]]
-    return data.groupby(groupby_cols)[VALUE_COLUMN].describe(**describe_kwargs)
+def describe(df, **describe_kwargs):
+    """Wrapper function for DataFrame.describe() with `df` grouped by everything except draw and value."""
+    if 'percentiles' not in describe_kwargs:
+        describe_kwargs['percentiles'] = [.025, .975]
+    excluded_cols = [DRAW_COLUMN, VALUE_COLUMN]
+    df = _ensure_columns_not_levels(df, excluded_cols)
+    groupby_cols = df.columns.difference(excluded_cols).to_list()
+    return df.groupby(groupby_cols)[VALUE_COLUMN].describe(**describe_kwargs)
 
 def get_mean_lower_upper(described_data, colname_mapper={'mean':'mean', '2.5%':'lower', '97.5%':'upper'}):
     """
