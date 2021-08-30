@@ -20,7 +20,7 @@ def set_global_index_columns(index_columns:list)->None:
     global INDEX_COLUMNS
     INDEX_COLUMNS = index_columns
 
-def _listify_singleton_cols(colnames, df):
+def _ensure_iterable(colnames, df):
     """Wrap a single column name in a list, or return colnames unaltered if it's already a list of column names."""
 
     def method1(colnames, df):
@@ -110,8 +110,8 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols=VALUE_COLUMN, res
         which have been aggregated over.
         If reset_index == False, all the resulting columns will be placed in the DataFrame's index except for `value_cols`.
     """
-    marginalized_cols = _listify_singleton_cols(marginalized_cols, df)
-    value_cols = _listify_singleton_cols(value_cols, df)
+    marginalized_cols = _ensure_iterable(marginalized_cols, df)
+    value_cols = _ensure_iterable(value_cols, df)
     # Move Index levels into columns to enable passing index level names as well as column names to marginalize
     df = _ensure_columns_not_levels(df, marginalized_cols)
     index_cols = df.columns.difference([*marginalized_cols, *value_cols]).to_list()
@@ -162,8 +162,8 @@ def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True
         If reset_index == False, all the resulting columns will be placed in the DataFrame's index except
         for `value_cols`.
     """
-    strata = _listify_singleton_cols(strata, df)
-    value_cols = _listify_singleton_cols(value_cols, df)
+    strata = _ensure_iterable(strata, df)
+    value_cols = _ensure_iterable(value_cols, df)
     index_cols = [*strata, *INDEX_COLUMNS]
     summed_data = df.groupby(index_cols, observed=True)[value_cols].sum()
     return summed_data.reset_index() if reset_index else summed_data
@@ -255,12 +255,12 @@ def ratio(
     if numerator_broadcast is None:
         numerator_broadcast = []
     else:
-        numerator_broadcast = _listify_singleton_cols(numerator_broadcast, numerator)
+        numerator_broadcast = _ensure_iterable(numerator_broadcast, numerator)
 
     if denominator_broadcast is None:
         denominator_broadcast = []
     else:
-        denominator_broadcast = _listify_singleton_cols(denominator_broadcast, denominator)
+        denominator_broadcast = _ensure_iterable(denominator_broadcast, denominator)
 
     # Avoid potential confusion by requiring common stratification columns to go in strata.
     if len(set(numerator_broadcast) & set(denominator_broadcast)) > 0:
@@ -280,7 +280,7 @@ def ratio(
         denominator_measure = '|'.join(denominator[measure_col].unique())
 
     # Ensure strata is an iterable of column names so it can be concatenated with broadcast columns
-    strata = _listify_singleton_cols(strata, denominator)
+    strata = _ensure_iterable(strata, denominator)
     # Stratify numerator and denominator with broadcast columns included
     numerator = stratify(numerator, [*strata, *numerator_broadcast], value_cols=value_col, reset_index=False)
     denominator = stratify(denominator, [*strata, *denominator_broadcast], value_cols=value_col, reset_index=False)
