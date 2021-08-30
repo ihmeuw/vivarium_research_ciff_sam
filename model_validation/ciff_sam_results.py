@@ -67,6 +67,11 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
         """Compute and store total person-time from wasting-state person-time."""
         self.person_time = get_total_person_time(self, include_all_ages)
 
+    def append_all_causes_burden(self):
+        """Append all-causes deaths, ylls, and ylds to these tables."""
+        for measure in ('deaths', 'ylls', 'ylds'):
+            self[measure] = self[measure].append(get_all_causes_measure(self[measure]), ignore_index=True)
+
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
 models = pd.DataFrame(
