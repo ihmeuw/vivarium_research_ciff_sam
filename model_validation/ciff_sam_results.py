@@ -63,6 +63,10 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
     def __delitem__(self, key):
         del self.key
 
+    def compute_person_time(self, include_all_ages=True):
+        """Compute and store total person-time from wasting-state person-time."""
+        self.person_time = get_total_person_time(self, include_all_ages)
+
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
 models = pd.DataFrame(
