@@ -149,10 +149,14 @@ def get_all_ages_person_time(person_time):
     return vop.marginalize(person_time, 'age').assign(age='all_ages')[person_time.columns]
 
 def get_total_person_time(data, include_all_ages=False):
-    """Compute total person tyme by age from person-time stratified by wasting state."""
+    """Compute total person time by age from person-time stratified by wasting state."""
     if not include_all_ages:
         person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
     else:
         person_time = get_total_person_time(data, False)
         person_time = person_time.append(get_all_ages_person_time(person_time), ignore_index=True)
     return person_time
+
+def get_all_causes_measure(measure):
+    """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
+    return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
