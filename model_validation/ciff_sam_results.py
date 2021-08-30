@@ -70,7 +70,8 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
     def append_all_causes_burden(self):
         """Append all-causes deaths, ylls, and ylds to these tables."""
         for measure in ('deaths', 'ylls', 'ylds'):
-            self[measure] = self[measure].append(get_all_causes_measure(self[measure]), ignore_index=True)
+            if 'all_causes' not in self[measure]['cause'].unique():
+                self[measure] = self[measure].append(get_all_causes_measure(self[measure]), ignore_index=True)
 
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
