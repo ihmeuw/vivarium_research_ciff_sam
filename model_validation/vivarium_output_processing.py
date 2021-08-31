@@ -77,6 +77,31 @@ def _ensure_columns_not_levels(df, column_list=None):
         df = df.reset_index()
     return df
 
+def value(df, include=None, exclude=None, value_cols=VALUE_COLUMN):
+    """Set the index of the dataframe so that its only column(s) is (are) value_cols.
+    This is useful for performing arithmetic on the dataframe, e.g. value(df1) + value(df2),
+    assuming the resulting dataframes have compatible indices.
+    - If neither `include` nor `exclude` are specified, the index of the dataframe will be
+      set to all columns except those in `value_cols`.
+    - If `include` is not None, the index will be set to the columns specified in `include`
+      plus those specified in INDEX_COLUMNS (typically DRAW_COLUMN and SCENARIO_COLUMN).
+    - If `exclude` is not None, the columns listed in `exclude` will be excluded from the index.
+    - If both `include` and `exclude` are specified, a ValueError is raised - you can specify either
+      columns to include or exclude, but not both.
+    """
+    value_cols = _ensure_iterable(value_cols, df)
+    if include is None:
+        exclude = _ensure_iterable(exclude, df, default=[])
+        index_cols = df.columns.difference([*value_cols, *exclude]).to_list()
+    elif exclude is not None:
+        raise ValueError(
+            "Only one of `include` or `exclude` can be specified."
+            f" You passed {include=}, {exclude=}") # syntax requires python >=3.8
+    else:
+        include = _ensure_iterable(include, df)
+        index_cols = [*include, *INDEX_COLUMNS]
+    return df.set_index(index_cols)[value_cols]
+
 def marginalize(df:pd.DataFrame, marginalized_cols, value_cols=VALUE_COLUMN, reset_index=True)->pd.DataFrame:
     """Sum the values of a dataframe over the specified columns to marginalize out.
 
