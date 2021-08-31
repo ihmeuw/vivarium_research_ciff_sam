@@ -73,6 +73,9 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
             if 'all_causes' not in self[measure]['cause'].unique():
                 self[measure] = self[measure].append(get_all_causes_measure(self[measure]), ignore_index=True)
 
+    def compute_sam_duration(self):
+        self.sam_duration = get_sam_duration(self)
+
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
 models = pd.DataFrame(
