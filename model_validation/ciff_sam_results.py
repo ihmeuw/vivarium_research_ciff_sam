@@ -73,8 +73,11 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
             if 'all_causes' not in self[measure]['cause'].unique():
                 self[measure] = self[measure].append(get_all_causes_measure(self[measure]), ignore_index=True)
 
-    def compute_sam_duration(self):
-        self.sam_duration = get_sam_duration(self)
+    def compute_sam_duration(self, strata=['year', 'sex', 'age']):
+        self.sam_duration = get_sam_duration(self, strata)
+
+    def compute_mam_duration(self, strata=['year', 'sex', 'age']):
+        self.mam_duration = get_mam_duration(self, strata)
 
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
@@ -170,7 +173,7 @@ def get_all_causes_measure(measure):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
     return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
 
-def get_sam_duration(data):
+def get_sam_duration(data, strata=['year', 'sex', 'age']):
     sam_person_time = data.wasting_state_person_time.query(
         "wasting_state == 'severe_acute_malnutrition'")
     transitions_into_sam = data.wasting_transition_count.query(
@@ -178,11 +181,11 @@ def get_sam_duration(data):
     sam_duration = vop.ratio(
         sam_person_time,
         transitions_into_sam,
-        strata=['year', 'sex', 'age']
+        strata=strata
     )
     return sam_duration
 
-def get_mam_duration(data):
+def get_mam_duration(data, strata=['year', 'sex', 'age']):
     mam_person_time = data.wasting_state_person_time.query(
         "wasting_state == 'moderate_acute_malnutrition'")
     mild_to_mam = data.wasting_transition_count.query(
@@ -193,6 +196,6 @@ def get_mam_duration(data):
     mam_duration = vop.ratio(
         mam_person_time,
         transitions_into_mam,
-        strata=['year', 'sex', 'age']
+        strata=strata
     )
     return mam_duration
