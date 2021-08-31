@@ -255,6 +255,10 @@ def ratio(
      ratio : DataFrame
          The ratio or rate data = numerator / denominator.
     """
+    # Ensure that index columns in numerator and denominator are columns not index levels,
+    # to guarantee that _ensure_iterable will work and df[measure_col] will work.
+    numerator = _ensure_columns_not_levels(numerator)
+    denominator = _ensure_columns_not_levels(denominator)
     # Ensure that numerator_broadcast and denominator_broadcast are iterables of column names
     numerator_broadcast = _ensure_iterable(numerator_broadcast, numerator, default=[])
     denominator_broadcast = _ensure_iterable(denominator_broadcast, denominator, default=[])
