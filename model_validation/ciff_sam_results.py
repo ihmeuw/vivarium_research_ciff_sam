@@ -166,3 +166,15 @@ def get_total_person_time(data, include_all_ages=False):
 def get_all_causes_measure(measure):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
     return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
+
+def get_sam_duration(data):
+    sam_person_time = data.wasting_state_person_time.query(
+        "wasting_state == 'severe_acute_malnutrition'")
+    transitions_into_sam = data.wasting_transition_count.query(
+        "transition == 'moderate_acute_malnutrition_to_severe_acute_malnutrition'")
+    sam_duration = vop.ratio(
+        sam_person_time,
+        transitions_into_sam,
+        strata=['year', 'sex', 'age']
+    )
+    return sam_duration
