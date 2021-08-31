@@ -20,8 +20,11 @@ def set_global_index_columns(index_columns:list)->None:
     global INDEX_COLUMNS
     INDEX_COLUMNS = index_columns
 
-def _ensure_iterable(colnames, df):
-    """Wrap a single column name in a list, or return colnames unaltered if it's already a list of column names."""
+def _ensure_iterable(colnames, df, default=None):
+    """Wrap a single column name in a list, or return colnames unaltered if it's already a list of column names.
+    If colnames is None, its value will first be set to the default value (e.g. pass `default=[]` to default to
+    an empty list when colnames is None).
+    """
 
     def method1(colnames, df):
         """Method 1 (doesn't depend on df): Assume that if colnames has a type that is in a whitelist of
@@ -64,6 +67,7 @@ def _ensure_iterable(colnames, df):
             raise ValueError(f"{colnames} must be a single column name in df or an iterable of column names")
         return colnames
 
+    if colnames is None: colnames = default
     return method1(colnames, df) # Go with the most restrictive method for now
 
 def _ensure_columns_not_levels(df, column_list=None):
