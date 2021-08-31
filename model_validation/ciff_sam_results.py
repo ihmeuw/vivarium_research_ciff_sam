@@ -181,3 +181,18 @@ def get_sam_duration(data):
         strata=['year', 'sex', 'age']
     )
     return sam_duration
+
+def get_mam_duration(data):
+    mam_person_time = data.wasting_state_person_time.query(
+        "wasting_state == 'moderate_acute_malnutrition'")
+    mild_to_mam = data.wasting_transition_count.query(
+        "transition == 'mild_child_wasting_to_moderate_acute_malnutrition'")
+    sam_to_mam = data.wasting_transition_count.query(
+        "transition == 'severe_acute_malnutrition_to_moderate_acute_malnutrition'")
+    transitions_into_mam = vop.value(mild_to_mam, exclude='transition') + vop.value(sam_to_mam, exclude='transition')
+    mam_duration = vop.ratio(
+        mam_person_time,
+        transitions_into_mam,
+        strata=['year', 'sex', 'age']
+    )
+    return mam_duration
