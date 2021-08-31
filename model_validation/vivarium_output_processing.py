@@ -256,15 +256,8 @@ def ratio(
          The ratio or rate data = numerator / denominator.
     """
     # Ensure that numerator_broadcast and denominator_broadcast are iterables of column names
-    if numerator_broadcast is None:
-        numerator_broadcast = []
-    else:
-        numerator_broadcast = _ensure_iterable(numerator_broadcast, numerator)
-
-    if denominator_broadcast is None:
-        denominator_broadcast = []
-    else:
-        denominator_broadcast = _ensure_iterable(denominator_broadcast, denominator)
+    numerator_broadcast = _ensure_iterable(numerator_broadcast, numerator, default=[])
+    denominator_broadcast = _ensure_iterable(denominator_broadcast, denominator, default=[])
 
     # Avoid potential confusion by requiring common stratification columns to go in strata.
     if len(set(numerator_broadcast) & set(denominator_broadcast)) > 0:
