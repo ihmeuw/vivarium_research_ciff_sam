@@ -6,6 +6,7 @@ from the CIFF SAM model.
 import collections
 import pandas as pd
 from model_validation.vivarium_transformed_output import VivariumTransformedOutput
+import model_validation.vivarium_output_processing as vop
 
 class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping):
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
@@ -61,6 +62,22 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
 
     def __delitem__(self, key):
         del self.key
+
+    def compute_person_time(self, include_all_ages=True):
+        """Compute and store total person-time from wasting-state person-time."""
+        self.person_time = get_total_person_time(self, include_all_ages)
+
+    def append_all_causes_burden(self):
+        """Append all-causes deaths, ylls, and ylds to these tables."""
+        for measure in ('deaths', 'ylls', 'ylds'):
+            if 'all_causes' not in self[measure]['cause'].unique():
+                self[measure] = self[measure].append(get_all_causes_measure(self[measure]), ignore_index=True)
+
+    def compute_sam_duration(self, strata=['year', 'sex', 'age']):
+        self.sam_duration = get_sam_duration(self, strata)
+
+    def compute_mam_duration(self, strata=['year', 'sex', 'age']):
+        self.mam_duration = get_mam_duration(self, strata)
 
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
@@ -138,3 +155,47 @@ def clean_transformed_data(data):
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
     return clean_data
+
+def get_all_ages_person_time(person_time):
+    """Compute all-ages person time from person time stratified by age."""
+    return vop.marginalize(person_time, 'age').assign(age='all_ages')[person_time.columns]
+
+def get_total_person_time(data, include_all_ages=False):
+    """Compute total person time by age from person-time stratified by wasting state."""
+    if not include_all_ages:
+        person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
+    else:
+        person_time = get_total_person_time(data, False)
+        person_time = person_time.append(get_all_ages_person_time(person_time), ignore_index=True)
+    return person_time
+
+def get_all_causes_measure(measure):
+    """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
+    return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
+
+def get_sam_duration(data, strata=['year', 'sex', 'age']):
+    sam_person_time = data.wasting_state_person_time.query(
+        "wasting_state == 'severe_acute_malnutrition'")
+    transitions_into_sam = data.wasting_transition_count.query(
+        "transition == 'moderate_acute_malnutrition_to_severe_acute_malnutrition'")
+    sam_duration = vop.ratio(
+        sam_person_time,
+        transitions_into_sam,
+        strata=strata
+    )
+    return sam_duration
+
+def get_mam_duration(data, strata=['year', 'sex', 'age']):
+    mam_person_time = data.wasting_state_person_time.query(
+        "wasting_state == 'moderate_acute_malnutrition'")
+    mild_to_mam = data.wasting_transition_count.query(
+        "transition == 'mild_child_wasting_to_moderate_acute_malnutrition'")
+    sam_to_mam = data.wasting_transition_count.query(
+        "transition == 'severe_acute_malnutrition_to_moderate_acute_malnutrition'")
+    transitions_into_mam = vop.value(mild_to_mam, exclude='transition') + vop.value(sam_to_mam, exclude='transition')
+    mam_duration = vop.ratio(
+        mam_person_time,
+        transitions_into_mam,
+        strata=strata
+    )
+    return mam_duration

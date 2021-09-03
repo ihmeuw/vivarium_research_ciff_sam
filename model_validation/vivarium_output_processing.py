@@ -20,8 +20,11 @@ def set_global_index_columns(index_columns:list)->None:
     global INDEX_COLUMNS
     INDEX_COLUMNS = index_columns
 
-def _listify_singleton_cols(colnames, df):
-    """Wrap a single column name in a list, or return colnames unaltered if it's already a list of column names."""
+def _ensure_iterable(colnames, df, default=None):
+    """Wrap a single column name in a list, or return colnames unaltered if it's already a list of column names.
+    If colnames is None, its value will first be set to the default value (e.g. pass `default=[]` to default to
+    an empty list when colnames is None).
+    """
 
     def method1(colnames, df):
         """Method 1 (doesn't depend on df): Assume that if colnames has a type that is in a whitelist of
@@ -64,7 +67,40 @@ def _listify_singleton_cols(colnames, df):
             raise ValueError(f"{colnames} must be a single column name in df or an iterable of column names")
         return colnames
 
+    if colnames is None: colnames = default
     return method1(colnames, df) # Go with the most restrictive method for now
+
+def _ensure_columns_not_levels(df, column_list=None):
+    """Move Index levels into columns to enable passing index level names as well as column names."""
+    if column_list is None: column_list = []
+    if df.index.nlevels > 1 or df.index.name in column_list:
+        df = df.reset_index()
+    return df
+
+def value(df, include=None, exclude=None, value_cols=VALUE_COLUMN):
+    """Set the index of the dataframe so that its only column(s) is (are) value_cols.
+    This is useful for performing arithmetic on the dataframe, e.g. value(df1) + value(df2),
+    assuming the resulting dataframes have compatible indices.
+    - If neither `include` nor `exclude` are specified, the index of the dataframe will be
+      set to all columns except those in `value_cols`.
+    - If `include` is not None, the index will be set to the columns specified in `include`
+      plus those specified in INDEX_COLUMNS (typically DRAW_COLUMN and SCENARIO_COLUMN).
+    - If `exclude` is not None, the columns listed in `exclude` will be excluded from the index.
+    - If both `include` and `exclude` are specified, a ValueError is raised - you can specify either
+      columns to include or exclude, but not both.
+    """
+    value_cols = _ensure_iterable(value_cols, df)
+    if include is None:
+        exclude = _ensure_iterable(exclude, df, default=[])
+        index_cols = df.columns.difference([*value_cols, *exclude]).to_list()
+    elif exclude is not None:
+        raise ValueError(
+            "Only one of `include` or `exclude` can be specified."
+            f" You passed {include=}, {exclude=}") # syntax requires python >=3.8
+    else:
+        include = _ensure_iterable(include, df)
+        index_cols = [*include, *INDEX_COLUMNS]
+    return df.set_index(index_cols)[value_cols]
 
 def marginalize(df:pd.DataFrame, marginalized_cols, value_cols=VALUE_COLUMN, reset_index=True)->pd.DataFrame:
     """Sum the values of a dataframe over the specified columns to marginalize out.
@@ -103,11 +139,10 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols=VALUE_COLUMN, res
         which have been aggregated over.
         If reset_index == False, all the resulting columns will be placed in the DataFrame's index except for `value_cols`.
     """
-    marginalized_cols = _listify_singleton_cols(marginalized_cols, df)
-    value_cols = _listify_singleton_cols(value_cols, df)
+    marginalized_cols = _ensure_iterable(marginalized_cols, df)
+    value_cols = _ensure_iterable(value_cols, df)
     # Move Index levels into columns to enable passing index level names as well as column names to marginalize
-    if df.index.nlevels > 1 or df.index.name in marginalized_cols:
-        df = df.reset_index()
+    df = _ensure_columns_not_levels(df, marginalized_cols)
     index_cols = df.columns.difference([*marginalized_cols, *value_cols]).to_list()
     summed_data = df.groupby(index_cols, observed=True)[value_cols].sum() # observed=True needed for Categorical data
     return summed_data.reset_index() if reset_index else summed_data
@@ -156,8 +191,8 @@ def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True
         If reset_index == False, all the resulting columns will be placed in the DataFrame's index except
         for `value_cols`.
     """
-    strata = _listify_singleton_cols(strata, df)
-    value_cols = _listify_singleton_cols(value_cols, df)
+    strata = _ensure_iterable(strata, df)
+    value_cols = _ensure_iterable(value_cols, df)
     index_cols = [*strata, *INDEX_COLUMNS]
     summed_data = df.groupby(index_cols, observed=True)[value_cols].sum()
     return summed_data.reset_index() if reset_index else summed_data
@@ -245,16 +280,13 @@ def ratio(
      ratio : DataFrame
          The ratio or rate data = numerator / denominator.
     """
+    # Ensure that index columns in numerator and denominator are columns not index levels,
+    # to guarantee that _ensure_iterable will work and df[measure_col] will work.
+    numerator = _ensure_columns_not_levels(numerator)
+    denominator = _ensure_columns_not_levels(denominator)
     # Ensure that numerator_broadcast and denominator_broadcast are iterables of column names
-    if numerator_broadcast is None:
-        numerator_broadcast = []
-    else:
-        numerator_broadcast = _listify_singleton_cols(numerator_broadcast, numerator)
-
-    if denominator_broadcast is None:
-        denominator_broadcast = []
-    else:
-        denominator_broadcast = _listify_singleton_cols(denominator_broadcast, denominator)
+    numerator_broadcast = _ensure_iterable(numerator_broadcast, numerator, default=[])
+    denominator_broadcast = _ensure_iterable(denominator_broadcast, denominator, default=[])
 
     # Avoid potential confusion by requiring common stratification columns to go in strata.
     if len(set(numerator_broadcast) & set(denominator_broadcast)) > 0:
@@ -274,7 +306,7 @@ def ratio(
         denominator_measure = '|'.join(denominator[measure_col].unique())
 
     # Ensure strata is an iterable of column names so it can be concatenated with broadcast columns
-    strata = _listify_singleton_cols(strata, denominator)
+    strata = _ensure_iterable(strata, denominator)
     # Stratify numerator and denominator with broadcast columns included
     numerator = stratify(numerator, [*strata, *numerator_broadcast], value_cols=value_col, reset_index=False)
     denominator = stratify(denominator, [*strata, *denominator_broadcast], value_cols=value_col, reset_index=False)
@@ -376,10 +408,14 @@ def averted(measure: pd.DataFrame, baseline_scenario: str, scenario_col=None):
 #     averted.insert(averted.columns.get_loc(scenario_col)+1, 'relative_to', baseline_scenario)
     return averted
 
-def describe(data, **describe_kwargs):
-    """Wrapper function for DataFrame.describe() with `data` grouped by everything except draw and value."""
-    groupby_cols = [col for col in data.columns if col not in [DRAW_COLUMN, VALUE_COLUMN]]
-    return data.groupby(groupby_cols)[VALUE_COLUMN].describe(**describe_kwargs)
+def describe(df, **describe_kwargs):
+    """Wrapper function for DataFrame.describe() with `df` grouped by everything except draw and value."""
+    if 'percentiles' not in describe_kwargs:
+        describe_kwargs['percentiles'] = [.025, .975]
+    excluded_cols = [DRAW_COLUMN, VALUE_COLUMN]
+    df = _ensure_columns_not_levels(df, excluded_cols)
+    groupby_cols = df.columns.difference(excluded_cols).to_list()
+    return df.groupby(groupby_cols)[VALUE_COLUMN].describe(**describe_kwargs)
 
 def get_mean_lower_upper(described_data, colname_mapper={'mean':'mean', '2.5%':'lower', '97.5%':'upper'}):
     """
