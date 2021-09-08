@@ -9,6 +9,8 @@ from model_validation.vivarium_transformed_output import VivariumTransformedOutp
 import model_validation.vivarium_output_processing as vop
 
 DEFAULT_STRATA = ['year', 'sex', 'age']
+ordered_ages = ['early_neonatal', 'late_neonatal', '1-5_months', '6-11_months', '12_to_23_months', '2_to_4', 'all_ages']
+ordered_ages_dtype = pd.api.types.CategoricalDtype(ordered_ages, ordered=True)
 
 class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping):
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
@@ -157,6 +159,9 @@ def clean_transformed_data(data):
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
     return clean_data
+
+def age_to_ordered_categorical(df):
+    df['age'] = df['age'].astype(ordered_ages_dtype)
 
 def get_all_ages_person_time(person_time):
     """Compute all-ages person time from person time stratified by age."""
