@@ -202,3 +202,12 @@ def get_mam_duration(data, strata=DEFAULT_STRATA):
         strata=strata
     )
     return mam_duration
+
+def get_sqlns_coverage(data, strata):
+    sqlns_coverage = vop.ratio(
+        data.wasting_state_person_time,
+        data.person_time.query("age != 'all_ages'"),
+        strata=strata,
+        numerator_broadcast='sq_lns'
+    )
+    return sqlns_coverage
