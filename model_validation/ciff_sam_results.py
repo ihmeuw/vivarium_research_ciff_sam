@@ -65,9 +65,9 @@ class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping)
     def __delitem__(self, key):
         del self.key
 
-    def compute_person_time(self, include_all_ages=True):
+    def compute_person_time(self, strata=DEFAULT_STRATA, include_all_ages=True):
         """Compute and store total person-time from wasting-state person-time."""
-        self.person_time = get_total_person_time(self, include_all_ages)
+        self.person_time = get_total_person_time(self, strata, include_all_ages)
 
     def append_all_causes_burden(self):
         """Append all-causes deaths, ylls, and ylds to these tables."""
@@ -162,12 +162,13 @@ def get_all_ages_person_time(person_time):
     """Compute all-ages person time from person time stratified by age."""
     return vop.marginalize(person_time, 'age').assign(age='all_ages')[person_time.columns]
 
-def get_total_person_time(data, include_all_ages=False):
+def get_total_person_time(data, strata=DEFAULT_STRATA, include_all_ages=False):
     """Compute total person time by age from person-time stratified by wasting state."""
     if not include_all_ages:
-        person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
+#         person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
+        person_time = vop.stratify(data.wasting_state_person_time, strata).assign(measure='person_time')
     else:
-        person_time = get_total_person_time(data, False)
+        person_time = get_total_person_time(data, strata, False)
         person_time = person_time.append(get_all_ages_person_time(person_time), ignore_index=True)
     return person_time
 
