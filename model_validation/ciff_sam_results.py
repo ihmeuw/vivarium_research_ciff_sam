@@ -162,8 +162,10 @@ def get_all_ages_person_time(person_time):
     """Compute all-ages person time from person time stratified by age."""
     return vop.marginalize(person_time, 'age').assign(age='all_ages')[person_time.columns]
 
-def get_person_time(data, strata, table_name='wasting_state_person_time', include_all_ages=False):
-    """Compute total person time by age from person-time stratified by wasting state."""
+def get_person_time(data, strata, table_name, include_all_ages=False):
+    """Compute total person-time stratified by strata, from person-time stratified additionally
+    by risk state or disease state.
+    """
     if not include_all_ages:
 #         person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
         person_time = vop.stratify(data[table_name], strata).assign(measure='person_time')
@@ -176,7 +178,7 @@ def get_all_causes_measure(measure):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
     return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
 
-def get_sam_duration(data, strata=DEFAULT_STRATA):
+def get_sam_duration(data, strata):
     sam_person_time = data.wasting_state_person_time.query(
         "wasting_state == 'severe_acute_malnutrition'")
     transitions_into_sam = data.wasting_transition_count.query(
@@ -188,7 +190,7 @@ def get_sam_duration(data, strata=DEFAULT_STRATA):
     )
     return sam_duration
 
-def get_mam_duration(data, strata=DEFAULT_STRATA):
+def get_mam_duration(data, strata):
     mam_person_time = data.wasting_state_person_time.query(
         "wasting_state == 'moderate_acute_malnutrition'")
     mild_to_mam = data.wasting_transition_count.query(
