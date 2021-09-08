@@ -8,6 +8,8 @@ import pandas as pd
 from model_validation.vivarium_transformed_output import VivariumTransformedOutput
 import model_validation.vivarium_output_processing as vop
 
+DEFAULT_STRATA = ['year', 'sex', 'age']
+
 class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping):
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
     Vivarium count data tables as object attributes and to store and manipulate additional tables
@@ -73,10 +75,10 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
             if 'all_causes' not in self[measure]['cause'].unique():
                 self[measure] = self[measure].append(get_all_causes_measure(self[measure]), ignore_index=True)
 
-    def compute_sam_duration(self, strata=['year', 'sex', 'age']):
+    def compute_sam_duration(self, strata=DEFAULT_STRATA):
         self.sam_duration = get_sam_duration(self, strata)
 
-    def compute_mam_duration(self, strata=['year', 'sex', 'age']):
+    def compute_mam_duration(self, strata=DEFAULT_STRATA):
         self.mam_duration = get_mam_duration(self, strata)
 
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
@@ -173,7 +175,7 @@ def get_all_causes_measure(measure):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
     return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
 
-def get_sam_duration(data, strata=['year', 'sex', 'age']):
+def get_sam_duration(data, strata=DEFAULT_STRATA):
     sam_person_time = data.wasting_state_person_time.query(
         "wasting_state == 'severe_acute_malnutrition'")
     transitions_into_sam = data.wasting_transition_count.query(
@@ -185,7 +187,7 @@ def get_sam_duration(data, strata=['year', 'sex', 'age']):
     )
     return sam_duration
 
-def get_mam_duration(data, strata=['year', 'sex', 'age']):
+def get_mam_duration(data, strata=DEFAULT_STRATA):
     mam_person_time = data.wasting_state_person_time.query(
         "wasting_state == 'moderate_acute_malnutrition'")
     mild_to_mam = data.wasting_transition_count.query(
