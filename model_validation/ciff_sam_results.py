@@ -10,7 +10,7 @@ import model_validation.vivarium_output_processing as vop
 
 DEFAULT_STRATA = ['year', 'sex', 'age']
 
-class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping):
+class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping):
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
     Vivarium count data tables as object attributes and to store and manipulate additional tables
     computed from the raw data.
@@ -24,7 +24,7 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
         'v2.3_wasting_birth_prevalence/ciff_sam/2021_07_26_17_14_31/count_data'
     )
     orig_data = VivariumTransformedOutput.from_directory(count_data_path) # Implements Mapping but not MutableMapping
-    data = VivariumMeasures(orig_data) # Copies the original data to an object implementing MutableMapping
+    data = VivariumResults(orig_data) # Copies the original data to an object implementing MutableMapping
     data.table_names() # Displays available count_data tables for this model run
     # Access the tables via object attributes:
     data.deaths # deaths data table
@@ -32,29 +32,29 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
     """
     @classmethod
     def from_model_spec(cls, model_id, run_id=None):
-        """Create a VivariumMeasures object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
+        """Create a VivariumResults object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
         (i.e. the folder name of the form 'yyyy_mm_dd_hh_mm_ss' indicating when the run was launched), using the
         `get_count_data_path` function to get the path to the count_data for the specified model.
 
         Example usage:
         --------------
         # This is a shortcut to creating an object equivalent to the one in the example from the class description
-        data = VivariumMeasures.from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
-        # data = VivariumMeasures.from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
+        data = VivariumResults.from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
+        # data = VivariumResults.from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
         data.table_names() # Displays available count_data tables for this model run
         """
         return cls.from_directory(get_count_data_path(model_id, run_id))
 
     @classmethod
     def cleaned_from_model_spec(cls, model_id, run_id=None):
-        """Create a VivariumMeasures object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
+        """Create a VivariumResults object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
         (i.e. the folder name of the form 'yyyy_mm_dd_hh_mm_ss' indicating when the run was launched), with
         the data tables reformatted using the `clean_transformed_data` function.
 
         Example usage:
         --------------
-        data = VivariumMeasures.cleaned_from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
-        # data = VivariumMeasures.cleaned_from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
+        data = VivariumResults.cleaned_from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
+        # data = VivariumResults.cleaned_from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
         data.table_names() # Displays available count_data tables for this model run
         """
         return cls(clean_transformed_data(cls.from_model_spec(model_id, run_id)))
@@ -131,8 +131,8 @@ def clean_transformed_data(data):
     data: Mapping of table names to DataFrames
         The transformed data tables to clean, from the CIFF SAM model.
     """
-    # Create a VivariumMeasures object with the same tables stored in `data`
-    clean_data = VivariumMeasures(data)
+    # Create a VivariumResults object with the same tables stored in `data`
+    clean_data = VivariumResults(data)
     # Define a function to make the transition count dataframes better
     def clean_transition_df(df):
         return (df
