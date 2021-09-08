@@ -206,6 +206,8 @@ def get_mam_duration(data, strata):
     return mam_duration
 
 def get_sqlns_coverage(data, strata):
+    if 'person_time' not in data:
+        data.compute_total_person_time()
     sqlns_coverage = vop.ratio(
         data.wasting_state_person_time,
         data.person_time.query("age != 'all_ages'"),
