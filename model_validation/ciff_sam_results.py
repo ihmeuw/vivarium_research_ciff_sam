@@ -151,6 +151,11 @@ def clean_transformed_data(data):
         clean_data['wasting_state_person_time'] = (
             data['wasting_state_person_time'].rename(columns={'cause':'wasting_state'})
         )
+    if 'stunting_state_person_time' in data:
+        # Rename mislabeled 'cause' column in `stunting_state_person_time`
+        clean_data['stunting_state_person_time'] = (
+            data['stunting_state_person_time'].rename(columns={'cause':'stunting_state'})
+        )
     if 'disease_state_person_time' in data:
         # Rename poorly named 'cause' column in `disease_state_person_time` and add an actual cause column
         clean_data['disease_state_person_time'] = (
