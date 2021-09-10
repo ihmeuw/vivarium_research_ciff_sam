@@ -230,59 +230,61 @@ def get_sqlns_coverage(data, strata):
     )
     return sqlns_coverage
 
-def get_sqlns_stunting_prevalence_ratio(data:VivariumResults, stratify_by_year:bool):
-    """Computes the prevalence ratio of each stunting category for SQ-LNS-covered vs. SQ-LNS-uncovered.
-    The prevalence ratio is for verifying the correct effect size of SQ-LNS on stunting.
+def get_sqlns_risk_prevalence_ratio(data:VivariumResults, risk_name:str, stratify_by_year:bool):
+    """Computes the prevalence ratio of each stunting or wasting category for SQ-LNS-covered vs. SQ-LNS-uncovered.
+    The prevalence ratio is for verifying the correct effect size of SQ-LNS on stunting or wasting.
 
-    If `stratify_by_year` is True, stunting prevalence will be computed separately for each year, whereas
+    If `stratify_by_year` is True, the risk category prevalences will be computed separately for each year, whereas
     if `stratify_by_year` is False, all years in the simulation will be pooled to compute the prevalence.
 
-    Note that we must stratify by age and sex since stunting prevalence varies across these demographic
+    Note that we must stratify by age and sex since stunting and wasting prevalence varies across these demographic
     strata, but we are using the same prevalence for all years, so we'll get more data per stratum
     if we omit year stratification.
     """
+    # Get the table name for stunting or wasting
+    risk_person_time_table = f"{risk_name}_state_person_time"
     # Get a list of age groups under 6 months (there is no sqlns treatment in these age groups)
     under_6mo = list(ages_categorical[ages_categorical < '6-11_months'])
     # Set the demographic strata based on whether we're stratifying by year
     demographic_strata = ['year', 'sex', 'age'] if stratify_by_year else ['sex', 'age']
     # Get total person-time in each stratum defined by demographics and sqlns coverage
     person_time_by_sqlns_coverage = get_person_time(
-        data, demographic_strata+['sq_lns'], 'stunting_state_person_time', include_all_ages=False
+        data, demographic_strata+['sq_lns'], risk_person_time_table, include_all_ages=False
     )
-    # Compute stunting prevalence in sqlns-covered group and in sqlns-uncovered group
-    stunting_prevalence_by_coverage = vop.ratio(
-        data.stunting_state_person_time,
+    # Compute risk prevalence in sqlns-covered group and in sqlns-uncovered group
+    risk_prevalence_by_coverage = vop.ratio(
+        data[risk_person_time_table],
         person_time_by_sqlns_coverage,
         strata=demographic_strata+['sq_lns'], # stratify by sqlns coverage
-        numerator_broadcast='stunting_state', # compute the prevalence of each stunting category
+        numerator_broadcast=f'{risk_name}_state', # compute the prevalence of each risk category
     )
     # Check that NaN's occur precisely where we expect coverage to be 0 (which results in division by zero)
     zero_coverage_query = "scenario == 'baseline' or age in @under_6mo"
     if stratify_by_year:
         zero_coverage_query += " or year == '2022'" # treatment doesn't start until 2023
-    assert stunting_prevalence_by_coverage.query(
+    assert risk_prevalence_by_coverage.query(
         f"sq_lns == 'covered' and ({zero_coverage_query})"
-    ).equals(stunting_prevalence_by_coverage.query('value!=value')),\
-    "Unexpected NaNs in stunting prevalence by sqlns coverage!" # Note: value!=value iff value==NaN
+    ).equals(risk_prevalence_by_coverage.query('value!=value')),\
+    f"Unexpected NaNs in {risk_name} prevalence by sqlns coverage!" # Note: value!=value iff value==NaN
 
     # Filter to strata where there is nonzero coverage once we're sure there's no problem
-    stunting_prevalence_by_coverage = stunting_prevalence_by_coverage.query(f"~({zero_coverage_query})")
+    risk_prevalence_by_coverage = risk_prevalence_by_coverage.query(f"~({zero_coverage_query})")
     # Get separate dataframes for sqlns-covered vs. sqlns-uncovered
-    stunting_prevalence_covered = (
-        stunting_prevalence_by_coverage.query("sq_lns == 'covered'")
-        .assign(measure='stunting_prevalence_among_sqlns_covered')
+    risk_prevalence_covered = (
+        risk_prevalence_by_coverage.query("sq_lns == 'covered'")
+        .assign(measure=f'{risk_name}_prevalence_among_sqlns_covered')
     )
-    stunting_prevalence_uncovered = (
-        stunting_prevalence_by_coverage.query("sq_lns == 'uncovered'")
-        .assign(measure='stunting_prevalence_among_sqlns_uncovered')
+    risk_prevalence_uncovered = (
+        risk_prevalence_by_coverage.query("sq_lns == 'uncovered'")
+        .assign(measure=f'{risk_name}_prevalence_among_sqlns_uncovered')
     )
     # We should have exactly the same strata in covered and uncovered, so the shapes should be equal
-    assert stunting_prevalence_covered.shape == stunting_prevalence_uncovered.shape,\
-    "Unmatched strata for stunting prevalence in sqlns-covered vs. sqlns-uncovered!"
-    # Compute the stunting prevalence ratio of sqlns-covered to sqlns-uncovered for each stunting category
-    stunting_prevalence_ratio = vop.ratio(
-        stunting_prevalence_covered,
-        stunting_prevalence_uncovered,
-        strata=demographic_strata+['stunting_state'], # match stunting categories to compute the ratio
+    assert risk_prevalence_covered.shape == risk_prevalence_uncovered.shape,\
+    f"Unmatched strata for {risk_name} prevalence in sqlns-covered vs. sqlns-uncovered!"
+    # Compute the risk prevalence ratio of sqlns-covered to sqlns-uncovered for each risk category
+    risk_prevalence_ratio = vop.ratio(
+        risk_prevalence_covered,
+        risk_prevalence_uncovered,
+        strata=demographic_strata+[f'{risk_name}_state'], # match risk categories to compute the ratio
     )
-    return stunting_prevalence_ratio
+    return risk_prevalence_ratio
