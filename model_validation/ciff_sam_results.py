@@ -8,7 +8,12 @@ import pandas as pd
 from model_validation.vivarium_transformed_output import VivariumTransformedOutput
 import model_validation.vivarium_output_processing as vop
 
-class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping):
+DEFAULT_STRATA = ['year', 'sex', 'age']
+ordered_ages = ['early_neonatal', 'late_neonatal', '1-5_months', '6-11_months', '12_to_23_months', '2_to_4', 'all_ages']
+ordered_ages_dtype = pd.api.types.CategoricalDtype(ordered_ages, ordered=True)
+ages_categorical = pd.Categorical(ordered_ages, categories=ordered_ages, ordered=True)
+
+class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping):
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
     Vivarium count data tables as object attributes and to store and manipulate additional tables
     computed from the raw data.
@@ -22,7 +27,7 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
         'v2.3_wasting_birth_prevalence/ciff_sam/2021_07_26_17_14_31/count_data'
     )
     orig_data = VivariumTransformedOutput.from_directory(count_data_path) # Implements Mapping but not MutableMapping
-    data = VivariumMeasures(orig_data) # Copies the original data to an object implementing MutableMapping
+    data = VivariumResults(orig_data) # Copies the original data to an object implementing MutableMapping
     data.table_names() # Displays available count_data tables for this model run
     # Access the tables via object attributes:
     data.deaths # deaths data table
@@ -30,29 +35,29 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
     """
     @classmethod
     def from_model_spec(cls, model_id, run_id=None):
-        """Create a VivariumMeasures object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
+        """Create a VivariumResults object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
         (i.e. the folder name of the form 'yyyy_mm_dd_hh_mm_ss' indicating when the run was launched), using the
         `get_count_data_path` function to get the path to the count_data for the specified model.
 
         Example usage:
         --------------
         # This is a shortcut to creating an object equivalent to the one in the example from the class description
-        data = VivariumMeasures.from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
-        # data = VivariumMeasures.from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
+        data = VivariumResults.from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
+        # data = VivariumResults.from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
         data.table_names() # Displays available count_data tables for this model run
         """
         return cls.from_directory(get_count_data_path(model_id, run_id))
 
     @classmethod
     def cleaned_from_model_spec(cls, model_id, run_id=None):
-        """Create a VivariumMeasures object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
+        """Create a VivariumResults object from the model_id (e.g. 1.0, 1.1, 2.0, etc.) and optionally run_id
         (i.e. the folder name of the form 'yyyy_mm_dd_hh_mm_ss' indicating when the run was launched), with
         the data tables reformatted using the `clean_transformed_data` function.
 
         Example usage:
         --------------
-        data = VivariumMeasures.cleaned_from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
-        # data = VivariumMeasures.cleaned_from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
+        data = VivariumResults.cleaned_from_model_spec(2.3) # run_id can be omitted if there is only one run_id for the model
+        # data = VivariumResults.cleaned_from_model_spec(2.3, '2021_07_26_17_14_31') # does the same thing
         data.table_names() # Displays available count_data tables for this model run
         """
         return cls(clean_transformed_data(cls.from_model_spec(model_id, run_id)))
@@ -63,9 +68,9 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
     def __delitem__(self, key):
         del self.key
 
-    def compute_person_time(self, include_all_ages=True):
+    def compute_total_person_time(self, include_all_ages=True):
         """Compute and store total person-time from wasting-state person-time."""
-        self.person_time = get_total_person_time(self, include_all_ages)
+        self.person_time = get_person_time(self, DEFAULT_STRATA, 'wasting_state_person_time', include_all_ages)
 
     def append_all_causes_burden(self):
         """Append all-causes deaths, ylls, and ylds to these tables."""
@@ -73,10 +78,10 @@ class VivariumMeasures(VivariumTransformedOutput, collections.abc.MutableMapping
             if 'all_causes' not in self[measure]['cause'].unique():
                 self[measure] = self[measure].append(get_all_causes_measure(self[measure]), ignore_index=True)
 
-    def compute_sam_duration(self, strata=['year', 'sex', 'age']):
+    def compute_sam_duration(self, strata=DEFAULT_STRATA):
         self.sam_duration = get_sam_duration(self, strata)
 
-    def compute_mam_duration(self, strata=['year', 'sex', 'age']):
+    def compute_mam_duration(self, strata=DEFAULT_STRATA):
         self.mam_duration = get_mam_duration(self, strata)
 
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
@@ -129,8 +134,8 @@ def clean_transformed_data(data):
     data: Mapping of table names to DataFrames
         The transformed data tables to clean, from the CIFF SAM model.
     """
-    # Create a VivariumMeasures object with the same tables stored in `data`
-    clean_data = VivariumMeasures(data)
+    # Create a VivariumResults object with the same tables stored in `data`
+    clean_data = VivariumResults(data)
     # Define a function to make the transition count dataframes better
     def clean_transition_df(df):
         return (df
@@ -147,6 +152,11 @@ def clean_transformed_data(data):
         clean_data['wasting_state_person_time'] = (
             data['wasting_state_person_time'].rename(columns={'cause':'wasting_state'})
         )
+    if 'stunting_state_person_time' in data:
+        # Rename mislabeled 'cause' column in `stunting_state_person_time`
+        clean_data['stunting_state_person_time'] = (
+            data['stunting_state_person_time'].rename(columns={'cause':'stunting_state'})
+        )
     if 'disease_state_person_time' in data:
         # Rename poorly named 'cause' column in `disease_state_person_time` and add an actual cause column
         clean_data['disease_state_person_time'] = (
@@ -156,16 +166,25 @@ def clean_transformed_data(data):
         )
     return clean_data
 
+def age_to_ordered_categorical(df, inplace=False):
+    if inplace:
+        df['age'] = df['age'].astype(ordered_ages_dtype)
+    else:
+        return df.assign(age=df['age'].astype(ordered_ages_dtype))
+
 def get_all_ages_person_time(person_time):
     """Compute all-ages person time from person time stratified by age."""
     return vop.marginalize(person_time, 'age').assign(age='all_ages')[person_time.columns]
 
-def get_total_person_time(data, include_all_ages=False):
-    """Compute total person time by age from person-time stratified by wasting state."""
+def get_person_time(data, strata, table_name, include_all_ages=False):
+    """Compute total person-time stratified by strata, from person-time stratified additionally
+    by risk state or disease state.
+    """
     if not include_all_ages:
-        person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
+#         person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
+        person_time = vop.stratify(data[table_name], strata).assign(measure='person_time')
     else:
-        person_time = get_total_person_time(data, False)
+        person_time = get_person_time(data, strata, table_name, False)
         person_time = person_time.append(get_all_ages_person_time(person_time), ignore_index=True)
     return person_time
 
@@ -173,7 +192,7 @@ def get_all_causes_measure(measure):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
     return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
 
-def get_sam_duration(data, strata=['year', 'sex', 'age']):
+def get_sam_duration(data, strata):
     sam_person_time = data.wasting_state_person_time.query(
         "wasting_state == 'severe_acute_malnutrition'")
     transitions_into_sam = data.wasting_transition_count.query(
@@ -185,7 +204,7 @@ def get_sam_duration(data, strata=['year', 'sex', 'age']):
     )
     return sam_duration
 
-def get_mam_duration(data, strata=['year', 'sex', 'age']):
+def get_mam_duration(data, strata):
     mam_person_time = data.wasting_state_person_time.query(
         "wasting_state == 'moderate_acute_malnutrition'")
     mild_to_mam = data.wasting_transition_count.query(
@@ -199,3 +218,71 @@ def get_mam_duration(data, strata=['year', 'sex', 'age']):
         strata=strata
     )
     return mam_duration
+
+def get_sqlns_coverage(data, strata):
+    if 'person_time' not in data:
+        data.compute_total_person_time()
+    sqlns_coverage = vop.ratio(
+        data.wasting_state_person_time,
+        data.person_time.query("age != 'all_ages'"),
+        strata=strata,
+        numerator_broadcast='sq_lns'
+    )
+    return sqlns_coverage
+
+def get_sqlns_stunting_prevalence_ratio(data:VivariumResults, stratify_by_year:bool):
+    """Computes the prevalence ratio of each stunting category for SQ-LNS-covered vs. SQ-LNS-uncovered.
+    The prevalence ratio is for verifying the correct effect size of SQ-LNS on stunting.
+
+    If `stratify_by_year` is True, stunting prevalence will be computed separately for each year, whereas
+    if `stratify_by_year` is False, all years in the simulation will be pooled to compute the prevalence.
+
+    Note that we must stratify by age and sex since stunting prevalence varies across these demographic
+    strata, but we are using the same prevalence for all years, so we'll get more data per stratum
+    if we omit year stratification.
+    """
+    # Get a list of age groups under 6 months (there is no sqlns treatment in these age groups)
+    under_6mo = list(ages_categorical[ages_categorical < '6-11_months'])
+    # Set the demographic strata based on whether we're stratifying by year
+    demographic_strata = ['year', 'sex', 'age'] if stratify_by_year else ['sex', 'age']
+    # Get total person-time in each stratum defined by demographics and sqlns coverage
+    person_time_by_sqlns_coverage = get_person_time(
+        data, demographic_strata+['sq_lns'], 'stunting_state_person_time', include_all_ages=False
+    )
+    # Compute stunting prevalence in sqlns-covered group and in sqlns-uncovered group
+    stunting_prevalence_by_coverage = vop.ratio(
+        data.stunting_state_person_time,
+        person_time_by_sqlns_coverage,
+        strata=demographic_strata+['sq_lns'], # stratify by sqlns coverage
+        numerator_broadcast='stunting_state', # compute the prevalence of each stunting category
+    )
+    # Check that NaN's occur precisely where we expect coverage to be 0 (which results in division by zero)
+    zero_coverage_query = "scenario == 'baseline' or age in @under_6mo"
+    if stratify_by_year:
+        zero_coverage_query += " or year == '2022'" # treatment doesn't start until 2023
+    assert stunting_prevalence_by_coverage.query(
+        f"sq_lns == 'covered' and ({zero_coverage_query})"
+    ).equals(stunting_prevalence_by_coverage.query('value!=value')),\
+    "Unexpected NaNs in stunting prevalence by sqlns coverage!" # Note: value!=value iff value==NaN
+
+    # Filter to strata where there is nonzero coverage once we're sure there's no problem
+    stunting_prevalence_by_coverage = stunting_prevalence_by_coverage.query(f"~({zero_coverage_query})")
+    # Get separate dataframes for sqlns-covered vs. sqlns-uncovered
+    stunting_prevalence_covered = (
+        stunting_prevalence_by_coverage.query("sq_lns == 'covered'")
+        .assign(measure='stunting_prevalence_among_sqlns_covered')
+    )
+    stunting_prevalence_uncovered = (
+        stunting_prevalence_by_coverage.query("sq_lns == 'uncovered'")
+        .assign(measure='stunting_prevalence_among_sqlns_uncovered')
+    )
+    # We should have exactly the same strata in covered and uncovered, so the shapes should be equal
+    assert stunting_prevalence_covered.shape == stunting_prevalence_uncovered.shape,\
+    "Unmatched strata for stunting prevalence in sqlns-covered vs. sqlns-uncovered!"
+    # Compute the stunting prevalence ratio of sqlns-covered to sqlns-uncovered for each stunting category
+    stunting_prevalence_ratio = vop.ratio(
+        stunting_prevalence_covered,
+        stunting_prevalence_uncovered,
+        strata=demographic_strata+['stunting_state'], # match stunting categories to compute the ratio
+    )
+    return stunting_prevalence_ratio
