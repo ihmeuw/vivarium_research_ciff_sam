@@ -77,6 +77,21 @@ def _ensure_columns_not_levels(df, column_list=None):
         df = df.reset_index()
     return df
 
+def list_columns(*column_groups, df=None, default=None)->list:
+    """Retuns a single list of column names from an arbitrary number
+    of lists of column names or single column names.
+
+    For example, all of the following return ['a', 'b', 'c', 'd', 'e']:
+
+    list_columns(['a', 'b', 'c', 'd', 'e'])
+    list_columns('a', 'b', 'c', 'd', 'e')
+    list_columns(['a', 'b'], ['c', 'd'], ['e'])
+    list_columns('a', ['b', 'c'], 'd', ['e'])
+    ...
+    etc.
+    """
+    return [col for col_or_cols in column_groups for col in _ensure_iterable(col_or_cols, df, default=default)]
+
 def value(df, include=None, exclude=None, value_cols=VALUE_COLUMN):
     """Set the index of the dataframe so that its only column(s) is (are) value_cols.
     This is useful for performing arithmetic on the dataframe, e.g. value(df1) + value(df2),
