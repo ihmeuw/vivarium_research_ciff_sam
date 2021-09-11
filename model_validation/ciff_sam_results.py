@@ -228,6 +228,17 @@ def get_sqlns_coverage(data, strata):
     )
     return sqlns_coverage
 
+def get_sqlns_mam_incidence_ratio(data:VivariumResults):
+    # Get a list of age groups over 6 months (there is no sqlns treatment in these age groups)
+    over_6mo = list(ages_categorical[(ages_categorical >= '6-11_months') & (ages_categorical != 'all_ages')])
+    # Get a query string to filter to rows with nonzero coverage
+    nonzero_coverage_query = "scenario=='treatment_and_prevention' and age in @over_6mo and year > '2022'"
+    # Filter wasting transitions dataframe to mild->mam transition and strata with nonzero coverage
+    mild_to_mam = data.wasting_transition_count.query(
+        f"transition =='mild_child_wasting_to_moderate_acute_malnutrition' and ({nonzero_coverage_query})"
+    )
+    return mild_to_mam
+
 def get_sqlns_risk_prevalence_ratio(data:VivariumResults, risk_name:str, stratify_by_year:bool):
     """Computes the prevalence ratio of each stunting or wasting category for SQ-LNS-covered vs. SQ-LNS-uncovered.
     The prevalence ratio is for verifying the correct effect size of SQ-LNS on stunting or wasting.
