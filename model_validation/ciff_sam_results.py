@@ -248,7 +248,7 @@ def get_sqlns_mam_incidence_ratio(data:VivariumResults):
     mam_incidence_rate_by_coverage = vop.ratio(
         mild_to_mam_count,
         mild_wasting_person_time,
-        strata=vop.list_columns(strata, 'sq_lns', df=mild_wasting_person_time),
+        strata = strata + ['sq_lns'],
     )
     assert mam_incidence_rate_by_coverage.value.notna().all(), "unexpected NaNs!"
     mam_incidence_rate_covered = (
