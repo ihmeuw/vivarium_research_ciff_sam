@@ -309,11 +309,11 @@ def get_sqlns_risk_prevalence_ratio(data:VivariumResults, risk_name:str, stratif
     # Get separate dataframes for sqlns-covered vs. sqlns-uncovered
     risk_prevalence_covered = (
         risk_prevalence_by_coverage.query("sq_lns == 'covered'")
-        .assign(measure=f'{risk_name}_prevalence_among_sqlns_covered')
+        .assign(measure='prevalence_among_sqlns_covered')
     )
     risk_prevalence_uncovered = (
         risk_prevalence_by_coverage.query("sq_lns == 'uncovered'")
-        .assign(measure=f'{risk_name}_prevalence_among_sqlns_uncovered')
+        .assign(measure='prevalence_among_sqlns_uncovered')
     )
     # We should have exactly the same strata in covered and uncovered, so the shapes should be equal
     assert risk_prevalence_covered.shape == risk_prevalence_uncovered.shape,\
