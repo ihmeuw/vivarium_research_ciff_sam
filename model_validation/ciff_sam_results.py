@@ -229,7 +229,10 @@ def get_sqlns_coverage(data, strata):
     return sqlns_coverage
 
 def get_sqlns_mam_incidence_ratio(data:VivariumResults):
-    # Get a list of age groups over 6 months (there is no sqlns treatment in these age groups)
+    """Computes the incidence rate ratio of MAM for SQLNS-covered vs. SQLNS-uncovered.
+    The computed incidence rate ratios are stratified by age, sex, and year.
+    """
+    # Get a list of age groups over 6 months (there is no sqlns treatment under 6 months)
     over_6mo = list(ages_categorical[(ages_categorical >= '6-11_months') & (ages_categorical != 'all_ages')])
     # Get a query string to filter to rows with nonzero coverage
     nonzero_coverage_query = "scenario=='treatment_and_prevention' and age in @over_6mo and year > '2022'"
@@ -238,10 +241,7 @@ def get_sqlns_mam_incidence_ratio(data:VivariumResults):
         f"transition =='mild_child_wasting_to_moderate_acute_malnutrition' and ({nonzero_coverage_query})"
     )
     strata = ['year', 'sex', 'age']
-#     person_time_by_sqlns_coverage = get_person_time_by_sqlns_coverage(data, 'wasting', strata)
-#     person_time_by_sqlns_coverage = get_person_time(
-#         data, vop.list_columns(strata, 'sq_lns'), 'wasting_state_person_time', include_all_ages=False
-#     ).query(nonzero_coverage_query)
+    # Get person-time in MILD wasting for strata with nonzero sqlns coverage
     mild_wasting_person_time = data.wasting_state_person_time.query(
         f"wasting_state=='mild_child_wasting' and ({nonzero_coverage_query})"
     )
