@@ -220,8 +220,6 @@ def get_mam_duration(data, strata):
     return mam_duration
 
 def get_sqlns_coverage(data, strata):
-    if 'person_time' not in data:
-        data.compute_total_person_time()
     sqlns_coverage = vop.ratio(
         data.wasting_state_person_time,
         data.person_time.query("age != 'all_ages'"),
@@ -229,6 +227,45 @@ def get_sqlns_coverage(data, strata):
         numerator_broadcast='sq_lns'
     )
     return sqlns_coverage
+
+def get_sqlns_mam_incidence_ratio(data:VivariumResults):
+    """Computes the incidence rate ratio of MAM for SQLNS-covered vs. SQLNS-uncovered.
+    The computed incidence rate ratios are stratified by age, sex, and year.
+    """
+    # Get a list of age groups over 6 months (there is no sqlns treatment under 6 months)
+    over_6mo = list(ages_categorical[(ages_categorical >= '6-11_months') & (ages_categorical != 'all_ages')])
+    # Get a query string to filter to rows with nonzero coverage
+    nonzero_coverage_query = "scenario=='treatment_and_prevention' and age in @over_6mo and year > '2022'"
+    # Filter wasting transitions dataframe to mild->mam transition and strata with nonzero sqlns coverage
+    mild_to_mam_count = data.wasting_transition_count.query(
+        f"transition =='mild_child_wasting_to_moderate_acute_malnutrition' and ({nonzero_coverage_query})"
+    )
+    strata = ['year', 'sex', 'age']
+    # Get person-time in MILD wasting for strata with nonzero sqlns coverage
+    mild_wasting_person_time = data.wasting_state_person_time.query(
+        f"wasting_state=='mild_child_wasting' and ({nonzero_coverage_query})"
+    )
+    mam_incidence_rate_by_coverage = vop.ratio(
+        mild_to_mam_count,
+        mild_wasting_person_time,
+        strata = strata + ['sq_lns'],
+    )
+    assert mam_incidence_rate_by_coverage.value.notna().all(), "unexpected NaNs!"
+    mam_incidence_rate_covered = (
+        mam_incidence_rate_by_coverage.query("sq_lns=='covered'")
+        .assign(measure="mam_incidence_rate_among_sqlns_covered")
+    )
+    mam_incidence_rate_uncovered = (
+        mam_incidence_rate_by_coverage.query("sq_lns=='uncovered'")
+        .assign(measure="mam_incidence_rate_among_sqlns_uncovered")
+    )
+    assert mam_incidence_rate_covered.shape == mam_incidence_rate_uncovered.shape, "unmatched strata!"
+    mam_incidence_rate_ratio = vop.ratio(
+        mam_incidence_rate_covered,
+        mam_incidence_rate_uncovered,
+        strata=strata,
+    )
+    return mam_incidence_rate_ratio
 
 def get_sqlns_risk_prevalence_ratio(data:VivariumResults, risk_name:str, stratify_by_year:bool):
     """Computes the prevalence ratio of each stunting or wasting category for SQ-LNS-covered vs. SQ-LNS-uncovered.
@@ -272,11 +309,11 @@ def get_sqlns_risk_prevalence_ratio(data:VivariumResults, risk_name:str, stratif
     # Get separate dataframes for sqlns-covered vs. sqlns-uncovered
     risk_prevalence_covered = (
         risk_prevalence_by_coverage.query("sq_lns == 'covered'")
-        .assign(measure=f'{risk_name}_prevalence_among_sqlns_covered')
+        .assign(measure='prevalence_among_sqlns_covered')
     )
     risk_prevalence_uncovered = (
         risk_prevalence_by_coverage.query("sq_lns == 'uncovered'")
-        .assign(measure=f'{risk_name}_prevalence_among_sqlns_uncovered')
+        .assign(measure='prevalence_among_sqlns_uncovered')
     )
     # We should have exactly the same strata in covered and uncovered, so the shapes should be equal
     assert risk_prevalence_covered.shape == risk_prevalence_uncovered.shape,\
