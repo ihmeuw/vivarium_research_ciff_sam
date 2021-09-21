@@ -187,6 +187,8 @@ def extract_transition_states(transition_df):
     function.
     """
     states_from_transition_pattern = r"^(?P<from_state>\w+)_to_(?P<to_state>\w+)$"
+    # Renaming the 'susceptible_to' states is a hack to deal with the fact there's not a unique string
+    # separating the 'from' and 'to' states -- it should be '__to__' instead of '_to_' or something
     states_df = (
         transition_df['transition']
         .str.replace("susceptible_to", "without") # Remove word 'to' from all states so we can split transitions on '_to_'
