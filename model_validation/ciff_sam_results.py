@@ -221,9 +221,19 @@ def get_all_causes_measure(measure):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
     return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
 
-def get_transition_rates(data, strata):
-    """Compute transition rates from transition counts and state person time."""
-    return
+def get_transition_rates(data, entity, strata, numerator_broadcast=None, denominator_broadcast=None, **kwargs):
+    """Compute the transition rates for the given entity (either 'wasting' or 'cause')."""
+    transition_count = data[f"{entity}_transition_count"]
+    state_person_time = data[f"{entity}_state_person_time"].rename(columns={f"{entity}_state": "from_state"})
+    transition_rates = vop.ratio(
+        transition_count,
+        state_person_time,
+        strata = vop.list_columns(strata, "from_state"),
+        numerator_broadcast = vop.list_columns('transition', 'to_state', numerator_broadcast, default=[]),
+        denominator_broadcast = denominator_broadcast,
+        **kwargs
+    )
+    return transition_rates
 
 def get_sam_duration(data, strata):
     sam_person_time = data.wasting_state_person_time.query(
