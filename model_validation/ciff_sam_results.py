@@ -92,7 +92,8 @@ models = pd.DataFrame(
         [2.4, 'v2.4_corrected_fertility', '2021_08_03_15_08_32'],
         [2.5, 'v2.5_stunting', '2021_08_05_16_17_12'],
         [3.0, 'v3.0_sq_lns', '2021_08_16_17_54_19'],
-        [3.1, 'v3.1_sq_lns_stunting_stratified', '2021_08_24_10_28_32']
+        [3.1, 'v3.1_sq_lns_stunting_stratified', '2021_08_24_10_28_32'],
+        [4.0, 'v4.0_wasting_treatment', '2021_09_20_14_45_25'],
     ],
     columns=['model_id', 'model_name', 'run_id']
 )
