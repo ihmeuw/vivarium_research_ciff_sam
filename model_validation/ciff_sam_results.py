@@ -138,10 +138,8 @@ def clean_transformed_data(data):
     clean_data = VivariumResults(data)
     # Define a function to make the transition count dataframes better
     def clean_transition_df(df):
-        return (df
-                .assign(transition=lambda df: df['measure'].str.replace('_event_count', ''))
-                .assign(measure='transition_count')
-               )
+        df = split_measure_and_transition_columns(df)
+        return df.join(extract_transition_states(df))
     # Make the wasting and disease transition count dataframes better
     clean_data.update(
         {table_name: clean_transition_df(table) for table_name, table in data.items()
@@ -185,7 +183,7 @@ def extract_transition_states(transition_df):
     states_df = (
         transition_df['transition']
         .str.replace("susceptible_to", "without") # Remove word 'to' from all states so we can split transitions on '_to_'
-        .str.extract(states_from_transition_pattern)
+        .str.extract(states_from_transition_pattern) # Create dataframe with 'from_state' and 'to_state' columns
         .apply(lambda col: col.str.replace("without", "susceptible_to")) # Restore original state names
     )
     return states_df
