@@ -166,6 +166,30 @@ def clean_transformed_data(data):
         )
     return clean_data
 
+def split_measure_and_transition_columns(transition_df):
+    """Separates the transition from the measure in the strings in the 'measure'
+    columns in a transition count dataframe, and puts these in separate 'transition'
+    and 'measure' columns.
+    """
+    return (transition_df
+            .assign(transition=lambda df: df['measure'].str.replace('_event_count', ''))
+            .assign(measure='transition_count') # Name the measure 'transition_count' rather than 'event_count'
+           )
+
+def extract_transition_states(transition_df):
+    """Gets the 'from state' and 'to state' from the transitions in a transition count dataframe,
+    after the transition has been put in its own 'transition' column by the `split_measure_and_transition_columns`
+    function.
+    """
+    states_from_transition_pattern = r"^(?P<from_state>\w+)_to_(?P<to_state>\w+)$"
+    states_df = (
+        transition_df['transition']
+        .str.replace("susceptible_to", "without") # Remove word 'to' from all states so we can split transitions on '_to_'
+        .str.extract(states_from_transition_pattern)
+        .apply(lambda col: col.str.replace("without", "susceptible_to")) # Restore original state names
+    )
+    return states_df
+
 def age_to_ordered_categorical(df, inplace=False):
     if inplace:
         df['age'] = df['age'].astype(ordered_ages_dtype)
