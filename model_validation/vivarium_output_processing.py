@@ -439,6 +439,13 @@ def get_mean_lower_upper(described_data, colname_mapper={'mean':'mean', '2.5%':'
     """
     return described_data[colname_mapper.keys()].rename(columns=colname_mapper).reset_index()
 
+# Alternative to the above function
+def aggregate_mean_lower_upper(df_or_groupby, lower_rank=0.025, upper_rank=0.975):
+    """Get mean, lower, and upper from a DataFrame or GroupBy object."""
+    def lower(x): return x.quantile(lower_rank)
+    def upper(x): return x.quantile(upper_rank)
+    return df_or_groupby.agg(['mean', lower, upper])
+
 def assert_values_equal(df1, df2, **kwargs):
     """Test whether the value columns of df1 and df2 are equal, using all other columns as the index,
     using the `pd.testing.assert_frame_equal` function.
