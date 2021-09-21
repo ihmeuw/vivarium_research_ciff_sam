@@ -66,7 +66,7 @@ class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping)
         setattr(self, key, value)
 
     def __delitem__(self, key):
-        del self.key
+        del self.__dict__[key]
 
     def compute_total_person_time(self, include_all_ages=True):
         """Compute and store total person-time from wasting-state person-time."""
@@ -157,11 +157,18 @@ def clean_transformed_data(data):
         )
     if 'disease_state_person_time' in data:
         # Rename poorly named 'cause' column in `disease_state_person_time` and add an actual cause column
-        clean_data['disease_state_person_time'] = (
+        # Also rename 'disease' to 'cause' for consistency between table name and column names
+        clean_data['cause_state_person_time'] = (
             data['disease_state_person_time']
             .rename(columns={'cause':'cause_state'})
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
+#         print(clean_data.table_names())
+        del clean_data['disease_state_person_time'] # Remove redundant table after renaming
+    if 'disease_transition_count' in data:
+        # Rename 'disease' to 'cause' for consistency between table name and column names
+        clean_data['cause_transition_count'] = clean_data['disease_transition_count']
+        del clean_data['disease_transition_count']
     return clean_data
 
 def split_measure_and_transition_columns(transition_df):
@@ -213,6 +220,10 @@ def get_person_time(data, strata, table_name, include_all_ages=False):
 def get_all_causes_measure(measure):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
     return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
+
+def get_transition_rates(data, strata):
+    """Compute transition rates from transition counts and state person time."""
+    return
 
 def get_sam_duration(data, strata):
     sam_person_time = data.wasting_state_person_time.query(
