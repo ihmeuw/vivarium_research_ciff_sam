@@ -66,7 +66,7 @@ class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping)
         setattr(self, key, value)
 
     def __delitem__(self, key):
-        del self.key
+        del self.__dict__[key]
 
     def compute_total_person_time(self, include_all_ages=True):
         """Compute and store total person-time from wasting-state person-time."""
@@ -138,10 +138,8 @@ def clean_transformed_data(data):
     clean_data = VivariumResults(data)
     # Define a function to make the transition count dataframes better
     def clean_transition_df(df):
-        return (df
-                .assign(transition=lambda df: df['measure'].str.replace('_event_count', ''))
-                .assign(measure='transition_count')
-               )
+        df = split_measure_and_transition_columns(df)
+        return df.join(extract_transition_states(df))
     # Make the wasting and disease transition count dataframes better
     clean_data.update(
         {table_name: clean_transition_df(table) for table_name, table in data.items()
@@ -159,12 +157,45 @@ def clean_transformed_data(data):
         )
     if 'disease_state_person_time' in data:
         # Rename poorly named 'cause' column in `disease_state_person_time` and add an actual cause column
-        clean_data['disease_state_person_time'] = (
+        # Also rename 'disease' to 'cause' for consistency between table name and column names
+        clean_data['cause_state_person_time'] = (
             data['disease_state_person_time']
             .rename(columns={'cause':'cause_state'})
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
+#         print(clean_data.table_names())
+        del clean_data['disease_state_person_time'] # Remove redundant table after renaming
+    if 'disease_transition_count' in data:
+        # Rename 'disease' to 'cause' for consistency between table name and column names
+        clean_data['cause_transition_count'] = clean_data['disease_transition_count']
+        del clean_data['disease_transition_count']
     return clean_data
+
+def split_measure_and_transition_columns(transition_df):
+    """Separates the transition from the measure in the strings in the 'measure'
+    columns in a transition count dataframe, and puts these in separate 'transition'
+    and 'measure' columns.
+    """
+    return (transition_df
+            .assign(transition=lambda df: df['measure'].str.replace('_event_count', ''))
+            .assign(measure='transition_count') # Name the measure 'transition_count' rather than 'event_count'
+           )
+
+def extract_transition_states(transition_df):
+    """Gets the 'from state' and 'to state' from the transitions in a transition count dataframe,
+    after the transition has been put in its own 'transition' column by the `split_measure_and_transition_columns`
+    function.
+    """
+    states_from_transition_pattern = r"^(?P<from_state>\w+)_to_(?P<to_state>\w+)$"
+    # Renaming the 'susceptible_to' states is a hack to deal with the fact there's not a unique string
+    # separating the 'from' and 'to' states -- it should be '__to__' instead of '_to_' or something
+    states_df = (
+        transition_df['transition']
+        .str.replace("susceptible_to", "without") # Remove word 'to' from all states so we can split transitions on '_to_'
+        .str.extract(states_from_transition_pattern) # Create dataframe with 'from_state' and 'to_state' columns
+        .apply(lambda col: col.str.replace("without", "susceptible_to")) # Restore original state names
+    )
+    return states_df
 
 def age_to_ordered_categorical(df, inplace=False):
     if inplace:
@@ -191,6 +222,20 @@ def get_person_time(data, strata, table_name, include_all_ages=False):
 def get_all_causes_measure(measure):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
     return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
+
+def get_transition_rates(data, entity, strata, numerator_broadcast=None, denominator_broadcast=None, **kwargs):
+    """Compute the transition rates for the given entity (either 'wasting' or 'cause')."""
+    transition_count = data[f"{entity}_transition_count"]
+    state_person_time = data[f"{entity}_state_person_time"].rename(columns={f"{entity}_state": "from_state"})
+    transition_rates = vop.ratio(
+        transition_count,
+        state_person_time,
+        strata = vop.list_columns(strata, "from_state"),
+        numerator_broadcast = vop.list_columns('transition', 'to_state', numerator_broadcast, default=[]),
+        denominator_broadcast = denominator_broadcast,
+        **kwargs
+    )
+    return transition_rates
 
 def get_sam_duration(data, strata):
     sam_person_time = data.wasting_state_person_time.query(
