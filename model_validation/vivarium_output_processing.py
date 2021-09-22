@@ -438,3 +438,26 @@ def get_mean_lower_upper(described_data, colname_mapper={'mean':'mean', '2.5%':'
     the format resulting from a call to DataFrame.describe().
     """
     return described_data[colname_mapper.keys()].rename(columns=colname_mapper).reset_index()
+
+# Alternative to the above function
+def aggregate_mean_lower_upper(df_or_groupby, lower_rank=0.025, upper_rank=0.975):
+    """Get mean, lower, and upper from a DataFrame or GroupBy object."""
+    def lower(x): return x.quantile(lower_rank)
+    def upper(x): return x.quantile(upper_rank)
+    return df_or_groupby.agg(['mean', lower, upper])
+
+def assert_values_equal(df1, df2, **kwargs):
+    """Test whether the value columns of df1 and df2 are equal, using all other columns as the index,
+    using the `pd.testing.assert_frame_equal` function.
+    """
+    df1 = vop.value(df1)
+    df2 = vop.value(df2).reindex(df1.index)
+    pd.testing.assert_frame_equal(df1, df2, **kwargs)
+
+def compare_values(df1, df2, **kwargs):
+    """Compare the value columns of df1 and df2, using all other columns as the index,
+    using the `pd.DataFrame.compare` method.
+    """
+    df1 = vop.value(df1)
+    df2 = vop.value(df2).reindex(df1.index)
+    return df1.compare(df2, **kwargs)
