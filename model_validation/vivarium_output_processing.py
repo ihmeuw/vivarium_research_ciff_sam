@@ -103,7 +103,12 @@ def value(df, include=None, exclude=None, value_cols=VALUE_COLUMN):
     - If `exclude` is not None, the columns listed in `exclude` will be excluded from the index.
     - If both `include` and `exclude` are specified, a ValueError is raised - you can specify either
       columns to include or exclude, but not both.
+    This function will still work if some of the non-value columns of df have been moved into a MultiIndex.
+    If the index consists of a single column and the intent is to add additional non-value columns
+    to the index, the caller should call df.reset_index() before passing to this function, or else
+    the existing index column will be dropped and replaced with the others.
     """
+    df = _ensure_columns_not_levels(df, list_columns(include, exclude, value_cols, df=df, default=[]))
     value_cols = _ensure_iterable(value_cols, df)
     if include is None:
         exclude = _ensure_iterable(exclude, df, default=[])
