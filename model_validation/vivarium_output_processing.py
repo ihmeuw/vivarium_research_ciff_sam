@@ -444,7 +444,7 @@ def get_mean_lower_upper(described_data, colname_mapper={'mean':'mean', '2.5%':'
     """
     return described_data[colname_mapper.keys()].rename(columns=colname_mapper).reset_index()
 
-# Alternative to the above function
+# Alternative strategy to the above function
 def aggregate_mean_lower_upper(df_or_groupby, lower_rank=0.025, upper_rank=0.975):
     """Get mean, lower, and upper from a DataFrame or GroupBy object."""
     def lower(x): return x.quantile(lower_rank)
