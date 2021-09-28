@@ -94,6 +94,7 @@ models = pd.DataFrame(
         [3.0, 'v3.0_sq_lns', '2021_08_16_17_54_19'],
         [3.1, 'v3.1_sq_lns_stunting_stratified', '2021_08_24_10_28_32'],
         [4.0, 'v4.0_wasting_treatment', '2021_09_20_14_45_25'],
+        [4.1, 'v4.1_wasting_treatment', '2021_09_24_16_36_30'],
     ],
     columns=['model_id', 'model_name', 'run_id']
 )
