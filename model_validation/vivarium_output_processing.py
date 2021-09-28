@@ -103,7 +103,12 @@ def value(df, include=None, exclude=None, value_cols=VALUE_COLUMN):
     - If `exclude` is not None, the columns listed in `exclude` will be excluded from the index.
     - If both `include` and `exclude` are specified, a ValueError is raised - you can specify either
       columns to include or exclude, but not both.
+    This function will still work if some of the non-value columns of df have been moved into a MultiIndex.
+    If the index consists of a single column and the intent is to add additional non-value columns
+    to the index, the caller should call df.reset_index() before passing to this function, or else
+    the existing index column will be dropped and replaced with the others.
     """
+    df = _ensure_columns_not_levels(df, list_columns(include, exclude, value_cols, df=df, default=[]))
     value_cols = _ensure_iterable(value_cols, df)
     if include is None:
         exclude = _ensure_iterable(exclude, df, default=[])
@@ -439,7 +444,7 @@ def get_mean_lower_upper(described_data, colname_mapper={'mean':'mean', '2.5%':'
     """
     return described_data[colname_mapper.keys()].rename(columns=colname_mapper).reset_index()
 
-# Alternative to the above function
+# Alternative strategy to the above function
 def aggregate_mean_lower_upper(df_or_groupby, lower_rank=0.025, upper_rank=0.975):
     """Get mean, lower, and upper from a DataFrame or GroupBy object."""
     def lower(x): return x.quantile(lower_rank)
@@ -450,14 +455,14 @@ def assert_values_equal(df1, df2, **kwargs):
     """Test whether the value columns of df1 and df2 are equal, using all other columns as the index,
     using the `pd.testing.assert_frame_equal` function.
     """
-    df1 = vop.value(df1)
-    df2 = vop.value(df2).reindex(df1.index)
+    df1 = value(df1)
+    df2 = value(df2).reindex(df1.index)
     pd.testing.assert_frame_equal(df1, df2, **kwargs)
 
 def compare_values(df1, df2, **kwargs):
     """Compare the value columns of df1 and df2, using all other columns as the index,
     using the `pd.DataFrame.compare` method.
     """
-    df1 = vop.value(df1)
-    df2 = vop.value(df2).reindex(df1.index)
+    df1 = value(df1)
+    df2 = value(df2).reindex(df1.index)
     return df1.compare(df2, **kwargs)
