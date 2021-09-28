@@ -281,7 +281,7 @@ def get_sqlns_mam_incidence_ratio(data:VivariumResults):
     # Get a list of age groups over 6 months (there is no sqlns treatment under 6 months)
     over_6mo = list(ages_categorical[(ages_categorical >= '6-11_months') & (ages_categorical != 'all_ages')])
     # Get a query string to filter to rows with nonzero coverage
-    nonzero_coverage_query = "scenario=='treatment_and_prevention' and age in @over_6mo and year > '2022'"
+    nonzero_coverage_query = "scenario not in ['baseline', 'wasting_treatment'] and age in @over_6mo and year > '2022'"
     # Filter wasting transitions dataframe to mild->mam transition and strata with nonzero sqlns coverage
     mild_to_mam_count = data.wasting_transition_count.query(
         f"transition =='mild_child_wasting_to_moderate_acute_malnutrition' and ({nonzero_coverage_query})"
@@ -342,7 +342,7 @@ def get_sqlns_risk_prevalence_ratio(data:VivariumResults, risk_name:str, stratif
         numerator_broadcast=f'{risk_name}_state', # compute the prevalence of each risk category
     )
     # Check that NaN's occur precisely where we expect coverage to be 0 (which results in division by zero)
-    zero_coverage_query = "scenario == 'baseline' or age in @under_6mo"
+    zero_coverage_query = "scenario in ['baseline', 'wasting_treatment'] or age in @under_6mo"
     if stratify_by_year:
         zero_coverage_query += " or year == '2022'" # treatment doesn't start until 2023
     assert risk_prevalence_by_coverage.query(
