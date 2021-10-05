@@ -95,6 +95,7 @@ models = pd.DataFrame(
         [3.1, 'v3.1_sq_lns_stunting_stratified', '2021_08_24_10_28_32'],
         [4.0, 'v4.0_wasting_treatment', '2021_09_20_14_45_25'],
         [4.1, 'v4.1_wasting_treatment', '2021_09_24_16_36_30'],
+        [4.5.2, 'v4.5.2_x_factor', '2021_09_29_12_12_47'],
     ],
     columns=['model_id', 'model_name', 'run_id']
 )
