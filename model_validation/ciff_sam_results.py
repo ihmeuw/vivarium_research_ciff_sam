@@ -88,13 +88,13 @@ project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
 models = pd.DataFrame(
     [
-        [2.3, 'v2.3_wasting_birth_prevalence', '2021_07_26_17_14_31'],
-        [2.4, 'v2.4_corrected_fertility', '2021_08_03_15_08_32'],
-        [2.5, 'v2.5_stunting', '2021_08_05_16_17_12'],
-        [3.0, 'v3.0_sq_lns', '2021_08_16_17_54_19'],
-        [3.1, 'v3.1_sq_lns_stunting_stratified', '2021_08_24_10_28_32'],
-        [4.0, 'v4.0_wasting_treatment', '2021_09_20_14_45_25'],
-        [4.1, 'v4.1_wasting_treatment', '2021_09_24_16_36_30'],
+        ['2.3', 'v2.3_wasting_birth_prevalence', '2021_07_26_17_14_31'],
+        ['2.4', 'v2.4_corrected_fertility', '2021_08_03_15_08_32'],
+        ['2.5', 'v2.5_stunting', '2021_08_05_16_17_12'],
+        ['3.0', 'v3.0_sq_lns', '2021_08_16_17_54_19'],
+        ['3.1', 'v3.1_sq_lns_stunting_stratified', '2021_08_24_10_28_32'],
+        ['4.0', 'v4.0_wasting_treatment', '2021_09_20_14_45_25'],
+        ['4.1', 'v4.1_wasting_treatment', '2021_09_24_16_36_30'],
         ['4.5.2', 'v4.5.2_x_factor', '2021_09_29_12_12_47'],
     ],
     columns=['model_id', 'model_name', 'run_id']
@@ -105,6 +105,7 @@ def get_count_data_path(model_id, run_id=None, models_df=models):
     If there is only one run_id in `models_df` corresponding to the requested model_id, then run_id
     does not need to be specified.
     """
+    model_id = str(model_id) # Allow user to pass in a float if possible
     model_metadata = models_df.set_index('model_id').loc[model_id]
     if run_id is None:
         if len(model_metadata[['run_id']]) > 1:
