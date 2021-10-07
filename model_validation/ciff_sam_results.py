@@ -168,8 +168,10 @@ def clean_transformed_data(data):
         # Rename poorly named 'cause' column in `disease_state_person_time` and add an actual cause column
         # Also rename 'disease' to 'cause' for consistency between table name and column names
         clean_data['cause_state_person_time'] = (
-            data['disease_state_person_time']
+            clean_data['disease_state_person_time']
             .rename(columns={'cause':'cause_state'})
+            # This is a hack that only works because all our diseases have 2 states named with the
+            # convention 'cause' and 'susceptible_to_cause'.
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
 #         print(clean_data.table_names())
