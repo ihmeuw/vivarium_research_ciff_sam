@@ -86,6 +86,11 @@ class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping)
 
 project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 
+# Eventually, I want to write a script to recursively search the directories and
+# populate this table automatically instead of hardcoding it. E.g. use Path.rglob to
+# find all output.hdf files and/or count_data subdirectories in a specified directory:
+# https://stackoverflow.com/questions/2186525/how-to-use-glob-to-find-files-recursively
+# https://docs.python.org/3/library/pathlib.html#pathlib.Path.rglob
 models = pd.DataFrame(
     [
         ['2.3', 'v2.3_wasting_birth_prevalence', '2021_07_26_17_14_31'],
