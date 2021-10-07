@@ -212,20 +212,25 @@ def age_to_ordered_categorical(df, inplace=False):
     else:
         return df.assign(age=df['age'].astype(ordered_ages_dtype))
 
-def get_all_ages_person_time(person_time):
+def get_all_ages_person_time(person_time_df, append=False):
     """Compute all-ages person time from person time stratified by age."""
-    return vop.marginalize(person_time, 'age').assign(age='all_ages')[person_time.columns]
+    all_ages_pt = vop.marginalize(person_time_df, 'age').assign(age='all_ages')[person_time_df.columns]
+    if append:
+        return person_time_df.append(all_ages_pt, ignore_index=True)
+    else:
+        return all_ages_pt
 
-def get_person_time(data, strata, table_name, include_all_ages=False):
-    """Compute total person-time stratified by strata, from person-time stratified additionally
-    by risk state or disease state.
+def get_total_person_time(data, entity, include_all_ages=False):
+    """Compute total person-time from person-time stratified additionally by risk state or cause state
+    (i.e. "state person-time") for the specified entity (one of 'wasting', 'stunting', or 'cause').
     """
     if not include_all_ages:
-#         person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
-        person_time = vop.stratify(data[table_name], strata).assign(measure='person_time')
+        # Keep all strata except entity_state
+        person_time = vop.marginalize(data[f"{entity}_state_person_time"], f"{entity}_state").assign(measure='person_time')
+#         person_time = vop.stratify(data[table_name], strata).assign(measure='person_time')
     else:
-        person_time = get_person_time(data, strata, table_name, False)
-        person_time = person_time.append(get_all_ages_person_time(person_time), ignore_index=True)
+        # Use recursion to first get age-stratified person-time, then append all ages person-time
+        person_time = get_all_ages_person_time(get_person_time(data, entity, include_all_ages=False), append=True)
     return person_time
 
 def get_all_causes_measure(measure):
