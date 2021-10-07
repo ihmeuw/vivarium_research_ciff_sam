@@ -174,10 +174,14 @@ def clean_transformed_data(data):
         )
 #         print(clean_data.table_names())
         del clean_data['disease_state_person_time'] # Remove redundant table after renaming
+
     if 'disease_transition_count' in data:
         # Rename 'disease' to 'cause' for consistency between table name and column names
         clean_data['cause_transition_count'] = clean_data['disease_transition_count']
         del clean_data['disease_transition_count']
+
+    clean_data['person_time'] = get_total_person_time(clean_data, 'wasting')
+
     return clean_data
 
 def split_measure_and_transition_columns(transition_df):
@@ -222,7 +226,8 @@ def get_all_ages_person_time(person_time_df, append=False):
 
 def get_total_person_time(data, entity, include_all_ages=False):
     """Compute total person-time from person-time stratified additionally by risk state or cause state
-    (i.e. "state person-time") for the specified entity (one of 'wasting', 'stunting', or 'cause').
+    (i.e. "state person-time"), by marginalizing the "{entity}_state" column for the specified entity
+    (one of 'wasting', 'stunting', or 'cause').
     """
     if not include_all_ages:
         # Keep all strata except entity_state
