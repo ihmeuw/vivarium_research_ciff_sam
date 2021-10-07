@@ -159,6 +159,8 @@ def clean_transformed_data(data):
         clean_data['wasting_state_person_time'] = (
             data['wasting_state_person_time'].rename(columns={'cause':'wasting_state'})
         )
+        clean_data['person_time'] = get_total_person_time(clean_data, 'wasting')
+
     if 'stunting_state_person_time' in data:
         # Rename mislabeled 'cause' column in `stunting_state_person_time`
         clean_data['stunting_state_person_time'] = (
@@ -174,15 +176,15 @@ def clean_transformed_data(data):
             # convention 'cause' and 'susceptible_to_cause'.
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
-#         print(clean_data.table_names())
         del clean_data['disease_state_person_time'] # Remove redundant table after renaming
+        # Compute total person time if we haven't already
+        if 'wasting_state_person_time' not in data:
+            clean_data['person_time'] = get_total_person_time(clean_data, 'cause')
 
     if 'disease_transition_count' in data:
         # Rename 'disease' to 'cause' for consistency between table name and column names
         clean_data['cause_transition_count'] = clean_data['disease_transition_count']
         del clean_data['disease_transition_count']
-
-    clean_data['person_time'] = get_total_person_time(clean_data, 'wasting')
 
     return clean_data
 
