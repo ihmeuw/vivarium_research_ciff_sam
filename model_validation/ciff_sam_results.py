@@ -68,10 +68,6 @@ class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping)
     def __delitem__(self, key):
         del self.__dict__[key]
 
-    def compute_total_person_time(self, include_all_ages=True):
-        """Compute and store total person-time from wasting-state person-time."""
-        self.person_time = get_person_time(self, DEFAULT_STRATA, 'wasting_state_person_time', include_all_ages)
-
     def append_all_causes_burden(self):
         """Append all-causes deaths, ylls, and ylds to these tables."""
         for measure in ('deaths', 'ylls', 'ylds'):
