@@ -238,9 +238,13 @@ def get_total_person_time(data, entity, include_all_ages=False):
         person_time = get_all_ages_person_time(get_person_time(data, entity, include_all_ages=False), append=True)
     return person_time
 
-def get_all_causes_measure(measure):
+def get_all_causes_measure(measure_df, append=False):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
-    return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
+    all_causes_measure = vop.marginalize(measure_df, 'cause').assign(cause='all_causes')[measure_df.columns]
+    if append:
+        return measure_df.append(all_causes_measure, ignore_index=True)
+    else:
+        return all_causes_measure
 
 def get_transition_rates(data, entity, strata, numerator_broadcast=None, denominator_broadcast=None, **kwargs):
     """Compute the transition rates for the given entity (either 'wasting' or 'cause')."""
