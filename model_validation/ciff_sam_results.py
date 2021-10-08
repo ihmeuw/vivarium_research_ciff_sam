@@ -218,6 +218,17 @@ def age_to_ordered_categorical(df, inplace=False):
     else:
         return df.assign(age=df['age'].astype(ordered_ages_dtype))
 
+def column_to_ordered_categorical(df, colname, ordered_categories, inplace=False):
+    """Converts the column `colname` of the DataFrame `df` to an orderd pandas Categorical.
+    This is useful for automatically displaying unique column elements in a specified order
+    in results tables or plots.
+    """
+    categorical = pd.Categorical(df[colname], categories=ordered_categories, ordered=True)
+    if inplace:
+        df[colname] = categorical
+    else:
+        return df.assign(**{colname: categorical})
+
 def get_all_ages_person_time(person_time_df, append=False):
     """Compute all-ages person time from person time stratified by age."""
     all_ages_pt = vop.marginalize(person_time_df, 'age').assign(age='all_ages')[person_time_df.columns]
