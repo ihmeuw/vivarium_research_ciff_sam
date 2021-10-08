@@ -169,7 +169,9 @@ def clean_transformed_data(data):
             clean_data['disease_state_person_time']
             .rename(columns={'cause':'cause_state'})
             # This is a hack that only works because all our diseases have 2 states named with the
-            # convention 'cause' and 'susceptible_to_cause'.
+            # convention 'cause' and 'susceptible_to_cause'. Ideally, the cause name should be
+            # recorded directly by the simulation instead, unless we can guarantee that all causes
+            # will have state names from which the cause name can be extracted in a uniform way.
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
         del clean_data['disease_state_person_time'] # Remove redundant table after renaming
@@ -245,6 +247,23 @@ def get_all_causes_measure(measure_df, append=False):
         return measure_df.append(all_causes_measure, ignore_index=True)
     else:
         return all_causes_measure
+
+def get_prevalence(data, entity, strata, **kwargs):
+    """Compute the prevalence of th specified entity (one of 'wasting', 'stunting', or 'cause').
+    kwargs stores keyword arguments to pass to the vivarium_output_processing.ratio() function.
+    """
+    # We need to broadcast over entity state to compute the prevalence of each state
+    if 'numerator_broadcast' in kwargs:
+        kwargs['numerator_broadcast'] = vop.list_columns(f"{entity}_state", kwargs['numerator_broadcast'], default=[])
+    else:
+        kwargs['numerator_broadcast'] = f"{entity}_state"
+    prevalence = vop.ratio(
+        data[f"{entity}_state_person_time"],
+        data.person_time,
+        strata=strata,
+        **kwargs,
+    )
+    return prevalence
 
 def get_transition_rates(data, entity, strata, numerator_broadcast=None, denominator_broadcast=None, **kwargs):
     """Compute the transition rates for the given entity (either 'wasting' or 'cause')."""
