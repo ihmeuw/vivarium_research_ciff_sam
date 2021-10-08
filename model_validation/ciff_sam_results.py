@@ -12,6 +12,13 @@ DEFAULT_STRATA = ['year', 'sex', 'age']
 ordered_ages = ['early_neonatal', 'late_neonatal', '1-5_months', '6-11_months', '12_to_23_months', '2_to_4', 'all_ages']
 ordered_ages_dtype = pd.api.types.CategoricalDtype(ordered_ages, ordered=True)
 ages_categorical = pd.Categorical(ordered_ages, categories=ordered_ages, ordered=True)
+ordered_scenarios = ['baseline', 'wasting_treatment', 'sqlns']
+ordered_wasting_states = [
+    'severe_acute_malnutrition',
+    'moderate_acute_malnutrition',
+    'mild_child_wasting',
+    'susceptible_to_child_wasting',
+]
 
 class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping):
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
@@ -228,6 +235,18 @@ def column_to_ordered_categorical(df, colname, ordered_categories, inplace=False
         df[colname] = categorical
     else:
         return df.assign(**{colname: categorical})
+
+def to_ordered_categoricals(df, inplace=False):
+    """Converts "standard" columns of df into Categoricals with their standard order."""
+    colnames = ['age', 'scenario', 'wasting_state']
+    orders = [ordered_ages, ordered_scenarios, ordered_wasting_states]
+    for colname, order in zip(colnames, orders):
+        if colname in df:
+            temp = column_to_ordered_categorical(df, colname, order, inplace)
+            if not inplace:
+                df = temp
+    if not inplace:
+        return df
 
 def get_all_ages_person_time(person_time_df, append=False):
     """Compute all-ages person time from person time stratified by age."""
