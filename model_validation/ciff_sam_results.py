@@ -12,6 +12,13 @@ DEFAULT_STRATA = ['year', 'sex', 'age']
 ordered_ages = ['early_neonatal', 'late_neonatal', '1-5_months', '6-11_months', '12_to_23_months', '2_to_4', 'all_ages']
 ordered_ages_dtype = pd.api.types.CategoricalDtype(ordered_ages, ordered=True)
 ages_categorical = pd.Categorical(ordered_ages, categories=ordered_ages, ordered=True)
+ordered_scenarios = ['baseline', 'wasting_treatment', 'sqlns']
+ordered_wasting_states = [
+    'severe_acute_malnutrition',
+    'moderate_acute_malnutrition',
+    'mild_child_wasting',
+    'susceptible_to_child_wasting',
+]
 
 class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping):
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
@@ -67,10 +74,6 @@ class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping)
 
     def __delitem__(self, key):
         del self.__dict__[key]
-
-    def compute_total_person_time(self, include_all_ages=True):
-        """Compute and store total person-time from wasting-state person-time."""
-        self.person_time = get_person_time(self, DEFAULT_STRATA, 'wasting_state_person_time', include_all_ages)
 
     def append_all_causes_burden(self):
         """Append all-causes deaths, ylls, and ylds to these tables."""
@@ -159,6 +162,8 @@ def clean_transformed_data(data):
         clean_data['wasting_state_person_time'] = (
             data['wasting_state_person_time'].rename(columns={'cause':'wasting_state'})
         )
+        clean_data['person_time'] = get_total_person_time(clean_data, 'wasting')
+
     if 'stunting_state_person_time' in data:
         # Rename mislabeled 'cause' column in `stunting_state_person_time`
         clean_data['stunting_state_person_time'] = (
@@ -168,16 +173,24 @@ def clean_transformed_data(data):
         # Rename poorly named 'cause' column in `disease_state_person_time` and add an actual cause column
         # Also rename 'disease' to 'cause' for consistency between table name and column names
         clean_data['cause_state_person_time'] = (
-            data['disease_state_person_time']
+            clean_data['disease_state_person_time']
             .rename(columns={'cause':'cause_state'})
+            # This is a hack that only works because all our diseases have 2 states named with the
+            # convention 'cause' and 'susceptible_to_cause'. Ideally, the cause name should be
+            # recorded directly by the simulation instead, unless we can guarantee that all causes
+            # will have state names from which the cause name can be extracted in a uniform way.
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
-#         print(clean_data.table_names())
         del clean_data['disease_state_person_time'] # Remove redundant table after renaming
+        # Compute total person time if we haven't already
+        if 'wasting_state_person_time' not in data:
+            clean_data['person_time'] = get_total_person_time(clean_data, 'cause')
+
     if 'disease_transition_count' in data:
         # Rename 'disease' to 'cause' for consistency between table name and column names
         clean_data['cause_transition_count'] = clean_data['disease_transition_count']
         del clean_data['disease_transition_count']
+
     return clean_data
 
 def split_measure_and_transition_columns(transition_df):
@@ -212,25 +225,75 @@ def age_to_ordered_categorical(df, inplace=False):
     else:
         return df.assign(age=df['age'].astype(ordered_ages_dtype))
 
-def get_all_ages_person_time(person_time):
-    """Compute all-ages person time from person time stratified by age."""
-    return vop.marginalize(person_time, 'age').assign(age='all_ages')[person_time.columns]
+def column_to_ordered_categorical(df, colname, ordered_categories, inplace=False):
+    """Converts the column `colname` of the DataFrame `df` to an orderd pandas Categorical.
+    This is useful for automatically displaying unique column elements in a specified order
+    in results tables or plots.
+    """
+    categorical = pd.Categorical(df[colname], categories=ordered_categories, ordered=True)
+    if inplace:
+        df[colname] = categorical
+    else:
+        return df.assign(**{colname: categorical})
 
-def get_person_time(data, strata, table_name, include_all_ages=False):
-    """Compute total person-time stratified by strata, from person-time stratified additionally
-    by risk state or disease state.
+def to_ordered_categoricals(df, inplace=False):
+    """Converts "standard" columns of df into Categoricals with their standard order."""
+    colnames = ['age', 'scenario', 'wasting_state']
+    orders = [ordered_ages, ordered_scenarios, ordered_wasting_states]
+    for colname, order in zip(colnames, orders):
+        if colname in df:
+            temp = column_to_ordered_categorical(df, colname, order, inplace)
+            if not inplace:
+                df = temp
+    if not inplace:
+        return df
+
+def get_all_ages_person_time(person_time_df, append=False):
+    """Compute all-ages person time from person time stratified by age."""
+    all_ages_pt = vop.marginalize(person_time_df, 'age').assign(age='all_ages')[person_time_df.columns]
+    if append:
+        return person_time_df.append(all_ages_pt, ignore_index=True)
+    else:
+        return all_ages_pt
+
+def get_total_person_time(data, entity, include_all_ages=False):
+    """Compute total person-time from person-time stratified additionally by risk state or cause state
+    (i.e. "state person-time"), by marginalizing the "{entity}_state" column for the specified entity
+    (one of 'wasting', 'stunting', or 'cause').
     """
     if not include_all_ages:
-#         person_time = vop.marginalize(data.wasting_state_person_time, 'wasting_state').assign(measure='person_time')
-        person_time = vop.stratify(data[table_name], strata).assign(measure='person_time')
+        # Keep all strata except entity_state
+        person_time = vop.marginalize(data[f"{entity}_state_person_time"], f"{entity}_state").assign(measure='person_time')
+#         person_time = vop.stratify(data[table_name], strata).assign(measure='person_time')
     else:
-        person_time = get_person_time(data, strata, table_name, False)
-        person_time = person_time.append(get_all_ages_person_time(person_time), ignore_index=True)
+        # Use recursion to first get age-stratified person-time, then append all ages person-time
+        person_time = get_all_ages_person_time(get_person_time(data, entity, include_all_ages=False), append=True)
     return person_time
 
-def get_all_causes_measure(measure):
+def get_all_causes_measure(measure_df, append=False):
     """Compute all-cause deaths, ylls, or ylds (generically, measure) from cause-stratified measure."""
-    return vop.marginalize(measure, 'cause').assign(cause='all_causes')[measure.columns]
+    all_causes_measure = vop.marginalize(measure_df, 'cause').assign(cause='all_causes')[measure_df.columns]
+    if append:
+        return measure_df.append(all_causes_measure, ignore_index=True)
+    else:
+        return all_causes_measure
+
+def get_prevalence(data, entity, strata, **kwargs):
+    """Compute the prevalence of th specified entity (one of 'wasting', 'stunting', or 'cause').
+    kwargs stores keyword arguments to pass to the vivarium_output_processing.ratio() function.
+    """
+    # We need to broadcast over entity state to compute the prevalence of each state
+    if 'numerator_broadcast' in kwargs:
+        kwargs['numerator_broadcast'] = vop.list_columns(f"{entity}_state", kwargs['numerator_broadcast'], default=[])
+    else:
+        kwargs['numerator_broadcast'] = f"{entity}_state"
+    prevalence = vop.ratio(
+        data[f"{entity}_state_person_time"],
+        data.person_time,
+        strata=strata,
+        **kwargs,
+    )
+    return prevalence
 
 def get_transition_rates(data, entity, strata, numerator_broadcast=None, denominator_broadcast=None, **kwargs):
     """Compute the transition rates for the given entity (either 'wasting' or 'cause')."""
