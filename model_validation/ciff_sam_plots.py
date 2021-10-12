@@ -60,7 +60,9 @@ def plot_draws_over_time_by_age(df, ylabel='', title='', ax=None):
     return ax
 
 def plot_over_time_by_column(df, colname, ylabel='', title='', uncertainty=True, ax=None):
-    """Plot mean value vs. year for each age, with (lower, upper) uncertainty band."""
+    """Plot mean value vs. year for each value in the column `colname`,
+    optionally with (lower, upper) uncertainty band.
+    """
     if ax is None:
         ax = plt.gca()
 #     df = cs.age_to_ordered_categorical(df) # Order the age groups chronologically
@@ -78,3 +80,25 @@ def plot_over_time_by_column(df, colname, ylabel='', title='', uncertainty=True,
     ax.set_title(title)
     ax.legend()
     return ax
+
+def plot_over_time_by_column_for_each_wasting_state_and_scenario(
+    df, colname, ylabel='', suptitle='', uncertainty=True
+    """Draw a 4x3 figure with rows indexed by wasting state and columns indexed by scenario,
+    calling plot_over_time_by_column() for each subplot.
+    """
+):
+    fig, axs = plt.subplots(4, 3, figsize=(16, 16))
+    for ws_num, wasting_state in enumerate(csr.ordered_wasting_states):
+        for s_num, scenario in enumerate(csr.ordered_scenarios):
+    #         print(scenario, wasting_state)
+            plot_over_time_by_column(
+                df.query("scenario==@scenario and wasting_state==@wasting_state"),
+                colname,
+                title=f"{scenario}, {wasting_state}",
+                ylabel=ylabel,
+                uncertainty=uncertainty,
+                ax=axs[ws_num, s_num],
+            )
+    fig.suptitle(suptitle, fontsize=18)
+    fig.tight_layout()
+    return fig
