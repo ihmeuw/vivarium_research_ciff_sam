@@ -83,10 +83,10 @@ def plot_over_time_by_column(df, colname, ylabel='', title='', uncertainty=True,
 
 def plot_over_time_by_column_for_each_wasting_state_and_scenario(
     df, colname, ylabel='', suptitle='', uncertainty=True
+):
     """Draw a 4x3 figure with rows indexed by wasting state and columns indexed by scenario,
     calling plot_over_time_by_column() for each subplot.
     """
-):
     fig, axs = plt.subplots(4, 3, figsize=(16, 16))
     for ws_num, wasting_state in enumerate(csr.ordered_wasting_states):
         for s_num, scenario in enumerate(csr.ordered_scenarios):
