@@ -58,3 +58,23 @@ def plot_draws_over_time_by_age(df, ylabel='', title='', ax=None):
     ax.set_title(title)
     ax.legend()
     return ax
+
+def plot_over_time_by_column(df, colname, ylabel='', title='', uncertainty=True, ax=None):
+    """Plot mean value vs. year for each age, with (lower, upper) uncertainty band."""
+    if ax is None:
+        ax = plt.gca()
+#     df = cs.age_to_ordered_categorical(df) # Order the age groups chronologically
+    agg = df.groupby([colname, 'year'])['value'].describe(percentiles=[.025, .975])
+    col_vals = agg.index.unique(colname)
+    for col_val in col_vals:
+        values = agg.xs(col_val)
+        years = values.index
+        ax.plot(years, values['mean'], label=f"{colname}={col_val}")
+        if uncertainty:
+            ax.fill_between(years, values['2.5%'], values['97.5%'], alpha=.1)
+
+    ax.set_xlabel('year')
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.legend()
+    return ax
