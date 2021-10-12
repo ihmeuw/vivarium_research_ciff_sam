@@ -278,18 +278,27 @@ def get_all_causes_measure(measure_df, append=False):
     else:
         return all_causes_measure
 
-def get_prevalence(data, entity, strata, **kwargs):
-    """Compute the prevalence of th specified entity (one of 'wasting', 'stunting', or 'cause').
-    kwargs stores keyword arguments to pass to the vivarium_output_processing.ratio() function.
+def get_prevalence(data, entity, strata, prefilter_query=None, **kwargs):
+    """Compute the prevalence of the specified entity (one of 'wasting', 'stunting', or 'cause').
+    `prefilter_query` is a query string passed to the DataFrame.query() function of both the
+    numerator and denominator before taking the ratio. This is useful for aggregating over strata
+    when computing the prevalence of a subset of the population.
+    `kwargs` is a dictionary to store keyword arguments to pass to the vivarium_output_processing.ratio()
+    function.
     """
+    state_person_time = data[f"{entity}_state_person_time"]
+    person_time = data.person_time
+    if prefilter_query is not None:
+        state_person_time = state_person_time.query(prefilter_query)
+        person_time = person_time.query(prefilter_query)
     # We need to broadcast over entity state to compute the prevalence of each state
     if 'numerator_broadcast' in kwargs:
         kwargs['numerator_broadcast'] = vop.list_columns(f"{entity}_state", kwargs['numerator_broadcast'], default=[])
     else:
         kwargs['numerator_broadcast'] = f"{entity}_state"
     prevalence = vop.ratio(
-        data[f"{entity}_state_person_time"],
-        data.person_time,
+        state_person_time,
+        person_time,
         strata=strata,
         **kwargs,
     )
