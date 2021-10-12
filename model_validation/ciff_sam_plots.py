@@ -66,6 +66,7 @@ def plot_over_time_by_column(df, colname, ylabel='', title='', uncertainty=True,
     if ax is None:
         ax = plt.gca()
 #     df = cs.age_to_ordered_categorical(df) # Order the age groups chronologically
+    df = csr.to_ordered_categoricals(df)
     agg = df.groupby([colname, 'year'])['value'].describe(percentiles=[.025, .975])
     col_vals = agg.index.unique(colname)
     for col_val in col_vals:
