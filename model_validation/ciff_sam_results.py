@@ -278,29 +278,40 @@ def get_all_causes_measure(measure_df, append=False):
     else:
         return all_causes_measure
 
-def get_prevalence(data, entity, strata, prefilter_query=None, **kwargs):
-    """Compute the prevalence of the specified entity (one of 'wasting', 'stunting', or 'cause').
+def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs):
+    """Compute the prevalence of the specified state_variable, which may be a risk or cause state
+    (one of 'wasting_state', 'stunting_state', or 'cause_state'), or another stratification variable
+    tracked in the simulation (e.g. 'sq_lns', 'wasting_treatment', or 'x_factor').
     `prefilter_query` is a query string passed to the DataFrame.query() function of both the
     numerator and denominator before taking the ratio. This is useful for aggregating over strata
     when computing the prevalence of a subset of the population.
-    `kwargs` is a dictionary to store keyword arguments to pass to the vivarium_output_processing.ratio()
+    The `kwargs` dictionary stores keyword arguments to pass to the vivarium_output_processing.ratio()
     function.
     """
-    state_person_time = data[f"{entity}_state_person_time"]
+    # Define numerator
+    if f"{state_variable}_person_time" in data:
+        state_person_time = data[f"{state_variable}_person_time"]
+    else:
+        # state_variable must be a column in total person time table
+        state_person_time = data.person_time
+    # Define denominator
     person_time = data.person_time
+    # Filter input dataframes if requested
     if prefilter_query is not None:
         state_person_time = state_person_time.query(prefilter_query)
         person_time = person_time.query(prefilter_query)
-    # We need to broadcast over entity state to compute the prevalence of each state
+    # Broadcast the numerator over the state variable to compute the prevalence of each state
     if 'numerator_broadcast' in kwargs:
-        kwargs['numerator_broadcast'] = vop.list_columns(f"{entity}_state", kwargs['numerator_broadcast'], default=[])
+        kwargs['numerator_broadcast'] = vop.list_columns(
+            state_variable, kwargs['numerator_broadcast'], df=state_person_time, default=[])
     else:
-        kwargs['numerator_broadcast'] = f"{entity}_state"
+        kwargs['numerator_broadcast'] = state_variable
+    # Divide
     prevalence = vop.ratio(
-        state_person_time,
-        person_time,
+        numerator=state_person_time,
+        denominator=person_time,
         strata=strata,
-        **kwargs,
+        **kwargs, # Includes numerator_broadcast over state_variable
     )
     return prevalence
 
