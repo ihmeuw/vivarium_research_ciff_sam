@@ -96,6 +96,7 @@ project_results_directory = '/ihme/costeffectiveness/results/vivarium_ciff_sam'
 # https://docs.python.org/3/library/pathlib.html#pathlib.Path.rglob
 models = pd.DataFrame(
     [
+        ['1.4', 'v1.4_adjusted_early_neonatal_lri_prevalence', '2021_06_14_18_37_42'],
         ['2.3', 'v2.3_wasting_birth_prevalence', '2021_07_26_17_14_31'],
         ['2.4', 'v2.4_corrected_fertility', '2021_08_03_15_08_32'],
         ['2.5', 'v2.5_stunting', '2021_08_05_16_17_12'],
