@@ -356,31 +356,6 @@ def get_mam_duration(data, strata):
     )
     return mam_duration
 
-def get_x_factor_prevalence(data, strata, **kwargs):
-    """"""
-    # We need to broadcast numerator over x_factor to compute the prevalence of each x-factor category
-    if 'numerator_broadcast' in kwargs:
-        kwargs['numerator_broadcast'] = vop.list_columns('x_factor', kwargs['numerator_broadcast'], default=[])
-    else:
-        kwargs['numerator_broadcast'] = 'x_factor'
-    numerator_broadcast = 'x_factor'
-    x_factor_prevalence = vop.ratio(
-        data.person_time,
-        data.person_time,
-        strata=strata,
-        **kwargs,
-    )
-    return x_factor_prevalence
-
-def get_sqlns_coverage(data, strata):
-    sqlns_coverage = vop.ratio(
-        data.wasting_state_person_time,
-        data.person_time.query("age != 'all_ages'"),
-        strata=strata,
-        numerator_broadcast='sq_lns'
-    )
-    return sqlns_coverage
-
 def get_sqlns_mam_incidence_ratio(data:VivariumResults):
     """Computes the incidence rate ratio of MAM for SQLNS-covered vs. SQLNS-uncovered.
     The computed incidence rate ratios are stratified by age, sex, and year.
