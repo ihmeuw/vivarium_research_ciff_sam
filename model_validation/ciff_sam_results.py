@@ -183,9 +183,6 @@ def clean_transformed_data(data):
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
         del clean_data['disease_state_person_time'] # Remove redundant table after renaming
-        # Compute total person time if we haven't already
-        if 'wasting_state_person_time' not in data:
-            clean_data['person_time'] = get_total_person_time(clean_data, 'cause')
 
     if 'disease_transition_count' in data:
         # Rename 'disease' to 'cause' for consistency between table name and column names
@@ -219,6 +216,15 @@ def extract_transition_states(transition_df):
         .apply(lambda col: col.str.replace("without", "susceptible_to")) # Restore original state names
     )
     return states_df
+
+def assert_cause_person_time_equal(data):
+    """Raise an AssertionError if different cause state observers recorded different amounts of total person-time."""
+    cause_person_time = get_total_person_time(data, 'cause')
+    first_cause, *remaining_causes = cause_person_time.cause.unique()
+    person_time = cause_person_time.query("cause==@first_cause").drop(columns='cause')
+    # Check that total person-time is the same for all causes
+    for cause in remaining_causes:
+        vop.assert_values_equal(person_time, cause_person_time.query("cause==@cause").drop(columns='cause'))
 
 def age_to_ordered_categorical(df, inplace=False):
     if inplace:
