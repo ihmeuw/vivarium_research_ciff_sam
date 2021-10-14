@@ -363,6 +363,31 @@ def get_mam_duration(data, strata):
     )
     return mam_duration
 
+def get_x_factor_incidence_ratio(data:VivariumResults, strata):
+    """Computes the ratios of incidence rates into Mild, MAM, and SAM for simulants with
+    X-factor to the incidence rates for simulants without X-factor.
+    """
+    wasting_incidence_transitions = (
+        'susceptible_to_child_wasting_to_mild_child_wasting',
+        'mild_child_wasting_to_moderate_acute_malnutrition',
+        'moderate_acute_malnutrition_to_severe_acute_malnutrition',
+    )
+    # Wasting state incidence rates
+    query="transition in @wasting_incidence_transitions"
+    incidence_rates = get_transition_rates(data, 'wasting', strata+['x_factor'])
+
+    # Wasting statee incidence rates with X-factor
+    incidence_with_x_factor = incidence_rates.query("x_factor=='cat1'")
+    # Wasting statee incidenc rates without X-factor
+    incidence_without_x_factor = incidence_rates.query("x_factor=='cat2'")
+    # Compute incidence ratio
+    incidence_rate_ratio = vop.ratio(
+        incidence_with_x_factor,
+        incidence_without_x_factor,
+        strata=strata,
+    )
+    return incidence_rate_ratio
+
 def get_sqlns_mam_incidence_ratio(data:VivariumResults):
     """Computes the incidence rate ratio of MAM for SQLNS-covered vs. SQLNS-uncovered.
     The computed incidence rate ratios are stratified by age, sex, and year.
