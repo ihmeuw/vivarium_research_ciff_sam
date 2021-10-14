@@ -66,6 +66,7 @@ def plot_over_time_by_column(df, colname, ylabel='', title='', uncertainty=True,
     if ax is None:
         ax = plt.gca()
 #     df = cs.age_to_ordered_categorical(df) # Order the age groups chronologically
+    df = csr.to_ordered_categoricals(df)
     agg = df.groupby([colname, 'year'])['value'].describe(percentiles=[.025, .975])
     col_vals = agg.index.unique(colname)
     for col_val in col_vals:
@@ -99,6 +100,24 @@ def plot_over_time_by_column_for_each_wasting_state_and_scenario(
                 uncertainty=uncertainty,
                 ax=axs[ws_num, s_num],
             )
+    fig.suptitle(suptitle, fontsize=18)
+    fig.tight_layout()
+    return fig
+
+def plot_over_time_by_column_for_each_scenario(df, colname, ylabel, suptitle):
+    """Draw a 3x1 figure with rows indexed by scenario, calling plot_over_time_by_column()
+    for each subplot.
+    """
+    fig, axs = plt.subplots(len(csr.ordered_scenarios),1, figsize=(12,18))
+    for s_num, scenario in enumerate(csr.ordered_scenarios):
+        csp.plot_over_time_by_column(
+            df.query("scenario==@scenario"),
+            colname,
+            ylabel,
+            f"{scenario}",
+            False,
+            ax=axs[s_num],
+        )
     fig.suptitle(suptitle, fontsize=18)
     fig.tight_layout()
     return fig
