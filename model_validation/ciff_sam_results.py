@@ -226,6 +226,17 @@ def assert_cause_person_time_equal(data):
     for cause in remaining_causes:
         vop.assert_values_equal(person_time, cause_person_time.query("cause==@cause").drop(columns='cause'))
 
+def get_age_group_bins(*cut_points):
+    """Split ages into n+1 bins beginning with the specified age groups, where n is the number
+    of age groups (cut points) passed.
+    """
+    cut_points = [ages_categorical[0], *cut_points]
+    bins = [
+        ages_categorical[(ages_categorical>=start) & (ages_categorical<stop)]
+        for start, stop in zip(cut_points[:-1], cut_points[1:])
+    ] + [ages_categorical[ages_categorical>=cut_points[-1]]]
+    return tuple(bins)
+
 def age_to_ordered_categorical(df, inplace=False):
     if inplace:
         df['age'] = df['age'].astype(ordered_ages_dtype)
