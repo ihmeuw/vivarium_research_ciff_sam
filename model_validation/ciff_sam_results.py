@@ -183,9 +183,6 @@ def clean_transformed_data(data):
             .assign(cause=lambda df: df['cause_state'].str.replace('susceptible_to_', ''))
         )
         del clean_data['disease_state_person_time'] # Remove redundant table after renaming
-        # Compute total person time if we haven't already
-        if 'wasting_state_person_time' not in data:
-            clean_data['person_time'] = get_total_person_time(clean_data, 'cause')
 
     if 'disease_transition_count' in data:
         # Rename 'disease' to 'cause' for consistency between table name and column names
