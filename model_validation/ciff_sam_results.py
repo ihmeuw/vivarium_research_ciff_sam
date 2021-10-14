@@ -217,6 +217,15 @@ def extract_transition_states(transition_df):
     )
     return states_df
 
+def assert_cause_person_time_equal(data):
+    """Raise an AssertionError if different cause state observers recorded different amounts of total person-time."""
+    cause_person_time = get_total_person_time(data, 'cause')
+    first_cause, *remaining_causes = cause_person_time.cause.unique()
+    person_time = cause_person_time.query("cause==@first_cause").drop(columns='cause')
+    # Check that total person-time is the same for all causes
+    for cause in remaining_causes:
+        vop.assert_values_equal(person_time, cause_person_time.query("cause==@cause").drop(columns='cause'))
+
 def age_to_ordered_categorical(df, inplace=False):
     if inplace:
         df['age'] = df['age'].astype(ordered_ages_dtype)
