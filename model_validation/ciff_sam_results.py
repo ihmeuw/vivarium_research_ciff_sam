@@ -383,19 +383,21 @@ def get_x_factor_incidence_ratio(data:VivariumResults, strata):
         'mild_child_wasting_to_moderate_acute_malnutrition',
         'moderate_acute_malnutrition_to_severe_acute_malnutrition',
     )
+    under_6mo, over_6mo, all_ages = map(list, get_age_group_bins('6-11_months', 'all_ages'))
     # Wasting state incidence rates
-    query="transition in @wasting_incidence_transitions"
+    transition_query="age in @over_6mo and transition in @wasting_incidence_transitions"
+    person_time_query="age in @over_6mo"
     incidence_rates = get_transition_rates(data, 'wasting', strata+['x_factor'])
 
-    # Wasting statee incidence rates with X-factor
+    # Wasting state incidence rates with X-factor
     incidence_with_x_factor = incidence_rates.query("x_factor=='cat1'")
-    # Wasting statee incidenc rates without X-factor
+    # Wasting state incidence rates without X-factor
     incidence_without_x_factor = incidence_rates.query("x_factor=='cat2'")
     # Compute incidence ratio
     incidence_rate_ratio = vop.ratio(
         incidence_with_x_factor,
         incidence_without_x_factor,
-        strata=strata,
+        strata=strata+['transition'],
     )
     return incidence_rate_ratio
 
