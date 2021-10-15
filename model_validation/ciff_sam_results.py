@@ -335,10 +335,10 @@ def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs)
 
 def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
     """Compute the transition rates for the given entity (either 'wasting' or 'cause')."""
+    # We need to match transition count with person-time in its from_state. We do this by
+    # renaming the entity_state column in state_person_time df, and adding from_state to strata.
     transition_count = data[f"{entity}_transition_count"]
     state_person_time = data[f"{entity}_state_person_time"].rename(columns={f"{entity}_state": "from_state"})
-    # Add from_state to strata to match transition count with person-time in its from_state
-    # in order to get the correct denominator for the arrow's rate
     strata = vop.list_columns(strata, "from_state")
 
     # Filter the numerator if requested
@@ -400,19 +400,26 @@ def get_x_factor_incidence_ratio(data:VivariumResults, strata):
     )
     under_6mo, over_6mo, all_ages = map(list, get_age_group_bins('6-11_months', 'all_ages'))
     # Wasting state incidence rates
-    transition_query="age in @over_6mo and transition in @wasting_incidence_transitions"
-    person_time_query="age in @over_6mo"
-    incidence_rates = get_transition_rates(data, 'wasting', strata+['x_factor'])
+    transition_query=f"age in {over_6mo} and transition in {wasting_incidence_transitions}"
+    # Need to stratify by X-factor to get transition rates with/without X-factor
+    incidence_rates = get_transition_rates(
+        data, 'wasting', vop.list_columns(strata, 'x_factor'), transition_query)
 
     # Wasting state incidence rates with X-factor
-    incidence_with_x_factor = incidence_rates.query("x_factor=='cat1'")
+    incidence_with_x_factor = (
+        incidence_rates.query("x_factor=='cat1'")
+        .assign(measure="incidence_rate_among_x_factor_cat1")
+    )
     # Wasting state incidence rates without X-factor
-    incidence_without_x_factor = incidence_rates.query("x_factor=='cat2'")
+    incidence_without_x_factor = (
+        incidence_rates.query("x_factor=='cat2'")
+        .assign(measure="incidence_rate_among_x_factor_cat2")
+    )
     # Compute incidence ratio
     incidence_rate_ratio = vop.ratio(
         incidence_with_x_factor,
         incidence_without_x_factor,
-        strata=strata+['transition'],
+        strata=vop.list_columns(strata, 'transition'),
     )
     return incidence_rate_ratio
 
