@@ -333,24 +333,31 @@ def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs)
     )
     return prevalence
 
-def get_transition_rates(data, entity, strata, transition_query=None, person_time_query=None, **kwargs):
+def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
     """Compute the transition rates for the given entity (either 'wasting' or 'cause')."""
     transition_count = data[f"{entity}_transition_count"]
     state_person_time = data[f"{entity}_state_person_time"].rename(columns={f"{entity}_state": "from_state"})
-    if transition_query is not None:
-        transition_count = transition_count.query(transition_query)
-    if person_time_query is not None:
-        state_person_time = state_person_time.query(person_time_query)
-    # Broadcast numerator over to_state (and, redundantly, transition) to get the transition rate out of each state
-    if 'numerator_broadcast' not in kwargs:
-        kwargs['numerator_broadcast'] = None
+    # Add from_state to strata to match transition count with person-time in its from_state
+    # in order to get the correct denominator for the arrow's rate
+    strata = vop.list_columns(strata, "from_state")
+
+    # Filter the numerator if requested
+    if prefilter_query is not None:
+        transition_count = transition_count.query(prefilter_query)
+    # Filter the denominator strata to match the numerator strata in order to avoid NaN's when dividing
+    stratum_lists = {colname: tuple(transition_count[colname].unique()) for colname in strata}
+    person_time_query = " and ".join(f"({colname} in {stratum_list})" for colname, stratum_list in stratum_lists.items())
+    state_person_time = state_person_time.query(person_time_query)
+
+    # Broadcast numerator over transition (and redundantly, to_state) to get the transition rate across
+    # each arrow separately. Without this broadcast, we'd get the sum of all rates out of each state.
     kwargs['numerator_broadcast'] = vop.list_columns(
-        'transition', 'to_state', kwargs['numerator_broadcast'], df=transition_count, default=[])
+        'transition', 'to_state', kwargs.get('numerator_broadcast'), df=transition_count, default=[])
+    # Divide to compute the transition rates
     transition_rates = vop.ratio(
         transition_count,
         state_person_time,
-         # Match transition count with person-time in its from_state to get the correct denominator for the rate
-        strata = vop.list_columns(strata, "from_state"),
+        strata = strata,
         **kwargs
     )
     return transition_rates
