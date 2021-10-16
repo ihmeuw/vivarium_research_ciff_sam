@@ -356,6 +356,29 @@ def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
     ).assign(measure='transition_rate')
     return transition_rates
 
+def get_relative_risk(data, measure, outcome_variable, strata, factor, reference_category, prefilter_query=None):
+    """
+    `measure` could be one of 'prevalence', 'incidence', 'mortality', 'remission' (or generically, 'rate').
+        Maybe 'prevalence', 'transition_rate', or 'mortality_rate' since each of these has a different type
+        of table for the numerator (person time, transition_count, or deaths).
+    `table_entity` or `outcome_variable`??? is passed to either get_transition_rates or get_prevalence,
+        and represents the outcome for which we want to compute the relative risk (e.g. 'stunting_state',
+        'wasting_state', or a stratification variable for measure=='prevalence', or 'wasting' or 'cause' for
+        measure=='transition_rate', or 'cause'??? or 'death'??? or None??? or cause_name???
+        for measure=='mortality_rate').
+        Note that `table_entity` may be sort of a "meta-description" of the outcome we're interested in,
+        with the actual outcome being one or more items described by this variable (e.g. the specific
+        stunting or wasting categories, specific wasting state or cause state transitions, or deaths from
+        a specific cause).
+    `factor` is the (risk) factor for which we want to compute the relative risk (e.g. x_factor, sq_lns,
+    stunting_state, wasting_state).
+    `reference_category` is the factor category to put in the denominator to use as a reference for computing
+    relative risks (e.g. the TMREL). The numerator should be broadcast over all remaining categories. (Note: In order
+    to do that, I will have to employ a similar strategy to what I did in the `difference` function, and add the
+    factor category column to the index with different names in the numerator and denominator.)
+    """
+    return
+
 def get_sam_duration(data, strata):
     sam_person_time = data.wasting_state_person_time.query(
         "wasting_state == 'severe_acute_malnutrition'")
