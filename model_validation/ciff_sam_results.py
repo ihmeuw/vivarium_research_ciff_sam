@@ -387,53 +387,32 @@ def get_x_factor_wasting_transition_rate_ratio(data:VivariumResults, strata):
     """Computes the ratios of incidence rates into Mild, MAM, and SAM for simulants with
     X-factor to the incidence rates for simulants without X-factor.
     """
-    wasting_incidence_transitions = (
-        'susceptible_to_child_wasting_to_mild_child_wasting',
-        'mild_child_wasting_to_moderate_acute_malnutrition',
-        'moderate_acute_malnutrition_to_severe_acute_malnutrition',
-    )
     under_6mo, over_6mo, all_ages = map(list, get_age_group_bins('6-11_months', 'all_ages'))
-    # Wasting state incidence rates
-#     transition_query=f"age in {over_6mo} and transition in {wasting_incidence_transitions}"
-#     # Need to stratify by X-factor to get transition rates with/without X-factor
-#     incidence_rates = get_transition_rates(
-#         data, 'wasting', vop.list_columns(strata, 'x_factor'), transition_query)
+    # Wasting state transition rates
     prefilter_query=f"age in {over_6mo}"
     # Need to stratify by X-factor to get transition rates with/without X-factor
-    incidence_rates = get_transition_rates(
+    transition_rates = get_transition_rates(
         data, 'wasting', vop.list_columns(strata, 'x_factor'), prefilter_query)
 
-#     # Wasting state incidence rates with X-factor
-#     incidence_with_x_factor = (
-#         incidence_rates.query("x_factor=='cat1'")
-#         .assign(measure="transition_rate_among_x_factor_cat1")
-#     )
-#     # Wasting state incidence rates without X-factor
-#     incidence_without_x_factor = (
-#         incidence_rates.query("x_factor=='cat2'")
-#         .assign(measure="transition_rate_among_x_factor_cat2")
-#     )
-    # Reference category (denominator)
+    # Reference category = without X-factor (denominator)
     transition_rate_without_x_factor =(
-        incidence_rates.query("x_factor=='cat2'")
+        transition_rates.query("x_factor=='cat2'")
         .rename(columns={'x_factor':'denominator_x_factor'})
-        .assign(measure='transition_rate')
     )
-    # Non-reference category(ies) (numerator
+    # Non-reference category(ies) = with X-factor (numerator)
     transition_rate_with_x_factor =(
-        incidence_rates.query("x_factor!='cat2'")
+        transition_rates.query("x_factor!='cat2'")
         .rename(columns={'x_factor':'numerator_x_factor'})
-        .assign(measure='transition_rate')
     )
     # Compute transition rate ratio
-    incidence_rate_ratio = vop.ratio(
+    transition_rate_ratio = vop.ratio(
         transition_rate_with_x_factor,
         transition_rate_without_x_factor,
         strata=vop.list_columns(strata, 'transition', 'from_state', 'to_state'),
         numerator_broadcast='numerator_x_factor',
         denominator_broadcast='denominator_x_factor',
-    )
-    return incidence_rate_ratio
+    ).assign(measure='rate_ratio')
+    return transition_rate_ratio
 
 def get_sqlns_mam_incidence_ratio(data:VivariumResults):
     """Computes the incidence rate ratio of MAM for SQLNS-covered vs. SQLNS-uncovered.
