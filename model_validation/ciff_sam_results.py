@@ -410,21 +410,35 @@ def get_x_factor_wasting_transition_rate_ratio(data:VivariumResults, strata):
     incidence_rates = get_transition_rates(
         data, 'wasting', vop.list_columns(strata, 'x_factor'), prefilter_query)
 
-    # Wasting state incidence rates with X-factor
-    incidence_with_x_factor = (
-        incidence_rates.query("x_factor=='cat1'")
-        .assign(measure="transition_rate_among_x_factor_cat1")
-    )
-    # Wasting state incidence rates without X-factor
-    incidence_without_x_factor = (
+#     # Wasting state incidence rates with X-factor
+#     incidence_with_x_factor = (
+#         incidence_rates.query("x_factor=='cat1'")
+#         .assign(measure="transition_rate_among_x_factor_cat1")
+#     )
+#     # Wasting state incidence rates without X-factor
+#     incidence_without_x_factor = (
+#         incidence_rates.query("x_factor=='cat2'")
+#         .assign(measure="transition_rate_among_x_factor_cat2")
+#     )
+    # Reference category (denominator)
+    transition_rate_without_x_factor =(
         incidence_rates.query("x_factor=='cat2'")
-        .assign(measure="transition_rate_among_x_factor_cat2")
+        .rename(columns={'x_factor':'denominator_x_factor'})
+        .assign(measure='transition_rate')
     )
-    # Compute incidence ratio
+    # Non-reference category(ies) (numerator
+    transition_rate_with_x_factor =(
+        incidence_rates.query("x_factor!='cat2'")
+        .rename(columns={'x_factor':'numerator_x_factor'})
+        .assign(measure='transition_rate')
+    )
+    # Compute transition rate ratio
     incidence_rate_ratio = vop.ratio(
-        incidence_with_x_factor,
-        incidence_without_x_factor,
-        strata=vop.list_columns(strata, 'transition'),
+        transition_rate_with_x_factor,
+        transition_rate_without_x_factor,
+        strata=vop.list_columns(strata, 'transition', 'from_state', 'to_state'),
+        numerator_broadcast='numerator_x_factor',
+        denominator_broadcast='denominator_x_factor',
     )
     return incidence_rate_ratio
 
