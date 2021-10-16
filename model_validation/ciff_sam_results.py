@@ -319,11 +319,8 @@ def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs)
         state_person_time = state_person_time.query(prefilter_query)
         person_time = person_time.query(prefilter_query)
     # Broadcast the numerator over the state variable to compute the prevalence of each state
-    if 'numerator_broadcast' in kwargs:
-        kwargs['numerator_broadcast'] = vop.list_columns(
-            state_variable, kwargs['numerator_broadcast'], df=state_person_time, default=[])
-    else:
-        kwargs['numerator_broadcast'] = state_variable
+    kwargs['numerator_broadcast'] = vop.list_columns(
+        state_variable, kwargs.get('numerator_broadcast'), df=state_person_time, default=[])
     # Divide
     prevalence = vop.ratio(
         numerator=state_person_time,
