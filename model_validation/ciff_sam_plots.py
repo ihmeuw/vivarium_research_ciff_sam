@@ -104,18 +104,18 @@ def plot_over_time_by_column_for_each_wasting_state_and_scenario(
     fig.tight_layout()
     return fig
 
-def plot_over_time_by_column_for_each_scenario(df, colname, ylabel, suptitle):
+def plot_over_time_by_column_for_each_scenario(df, colname, ylabel, suptitle, uncertainty):
     """Draw a 3x1 figure with rows indexed by scenario, calling plot_over_time_by_column()
     for each subplot.
     """
     fig, axs = plt.subplots(len(csr.ordered_scenarios),1, figsize=(12,18))
     for s_num, scenario in enumerate(csr.ordered_scenarios):
-        csp.plot_over_time_by_column(
+        plot_over_time_by_column(
             df.query("scenario==@scenario"),
             colname,
             ylabel,
             f"{scenario}",
-            False,
+            uncertainty,
             ax=axs[s_num],
         )
     fig.suptitle(suptitle, fontsize=18)
