@@ -330,7 +330,7 @@ def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs)
         denominator=person_time,
         strata=strata,
         **kwargs, # Includes numerator_broadcast over state_variable
-    )
+    ).assign(measure='prevalence')
     return prevalence
 
 def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
@@ -341,14 +341,10 @@ def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
     state_person_time = data[f"{entity}_state_person_time"].rename(columns={f"{entity}_state": "from_state"})
     strata = vop.list_columns(strata, "from_state")
 
-    # Filter the numerator (and denominator) if requested
+    # Filter the numerator and denominator if requested
     if prefilter_query is not None:
         transition_count = transition_count.query(prefilter_query)
         state_person_time = state_person_time.query(prefilter_query)
-#         # Filter the denominator strata to match the numerator strata in order to avoid NaN's when dividing
-#         stratum_lists = {colname: tuple(transition_count[colname].unique()) for colname in strata}
-#         person_time_query = " and ".join(f"({colname} in {stratum_list})" for colname, stratum_list in stratum_lists.items())
-#         state_person_time = state_person_time.query(person_time_query)
 
     # Broadcast numerator over transition (and redundantly, to_state) to get the transition rate across
     # each arrow separately. Without this broadcast, we'd get the sum of all rates out of each state.
@@ -360,7 +356,7 @@ def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
         state_person_time,
         strata = strata,
         **kwargs
-    )
+    ).assign(measure='transition_rate')
     return transition_rates
 
 def get_sam_duration(data, strata):
