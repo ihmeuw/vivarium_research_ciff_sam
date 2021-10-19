@@ -226,6 +226,17 @@ def assert_cause_person_time_equal(data):
     for cause in remaining_causes:
         vop.assert_values_equal(person_time, cause_person_time.query("cause==@cause").drop(columns='cause'))
 
+def get_age_group_bins(*cut_points):
+    """Split ages into n+1 bins beginning with the specified age groups, where n is the number
+    of age groups (cut points) passed.
+    """
+    cut_points = [ages_categorical[0], *cut_points]
+    bins = [
+        ages_categorical[(ages_categorical>=start) & (ages_categorical<stop)]
+        for start, stop in zip(cut_points[:-1], cut_points[1:])
+    ] + [ages_categorical[ages_categorical>=cut_points[-1]]]
+    return tuple(bins)
+
 def age_to_ordered_categorical(df, inplace=False):
     if inplace:
         df['age'] = df['age'].astype(ordered_ages_dtype)
@@ -322,16 +333,32 @@ def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs)
     )
     return prevalence
 
-def get_transition_rates(data, entity, strata, numerator_broadcast=None, denominator_broadcast=None, **kwargs):
+def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
     """Compute the transition rates for the given entity (either 'wasting' or 'cause')."""
+    # We need to match transition count with person-time in its from_state. We do this by
+    # renaming the entity_state column in state_person_time df, and adding from_state to strata.
     transition_count = data[f"{entity}_transition_count"]
     state_person_time = data[f"{entity}_state_person_time"].rename(columns={f"{entity}_state": "from_state"})
+    strata = vop.list_columns(strata, "from_state")
+
+    # Filter the numerator (and denominator) if requested
+    if prefilter_query is not None:
+        transition_count = transition_count.query(prefilter_query)
+        state_person_time = state_person_time.query(prefilter_query)
+#         # Filter the denominator strata to match the numerator strata in order to avoid NaN's when dividing
+#         stratum_lists = {colname: tuple(transition_count[colname].unique()) for colname in strata}
+#         person_time_query = " and ".join(f"({colname} in {stratum_list})" for colname, stratum_list in stratum_lists.items())
+#         state_person_time = state_person_time.query(person_time_query)
+
+    # Broadcast numerator over transition (and redundantly, to_state) to get the transition rate across
+    # each arrow separately. Without this broadcast, we'd get the sum of all rates out of each state.
+    kwargs['numerator_broadcast'] = vop.list_columns(
+        'transition', 'to_state', kwargs.get('numerator_broadcast'), df=transition_count, default=[])
+    # Divide to compute the transition rates
     transition_rates = vop.ratio(
         transition_count,
         state_person_time,
-        strata = vop.list_columns(strata, "from_state"),
-        numerator_broadcast = vop.list_columns('transition', 'to_state', numerator_broadcast, default=[]),
-        denominator_broadcast = denominator_broadcast,
+        strata = strata,
         **kwargs
     )
     return transition_rates
@@ -362,6 +389,44 @@ def get_mam_duration(data, strata):
         strata=strata
     )
     return mam_duration
+
+def get_x_factor_wasting_transition_rate_ratio(data:VivariumResults, strata):
+    """Computes the ratios of incidence rates into Mild, MAM, and SAM for simulants with
+    X-factor to the incidence rates for simulants without X-factor.
+    """
+    wasting_incidence_transitions = (
+        'susceptible_to_child_wasting_to_mild_child_wasting',
+        'mild_child_wasting_to_moderate_acute_malnutrition',
+        'moderate_acute_malnutrition_to_severe_acute_malnutrition',
+    )
+    under_6mo, over_6mo, all_ages = map(list, get_age_group_bins('6-11_months', 'all_ages'))
+    # Wasting state incidence rates
+#     transition_query=f"age in {over_6mo} and transition in {wasting_incidence_transitions}"
+#     # Need to stratify by X-factor to get transition rates with/without X-factor
+#     incidence_rates = get_transition_rates(
+#         data, 'wasting', vop.list_columns(strata, 'x_factor'), transition_query)
+    prefilter_query=f"age in {over_6mo}"
+    # Need to stratify by X-factor to get transition rates with/without X-factor
+    incidence_rates = get_transition_rates(
+        data, 'wasting', vop.list_columns(strata, 'x_factor'), prefilter_query)
+
+    # Wasting state incidence rates with X-factor
+    incidence_with_x_factor = (
+        incidence_rates.query("x_factor=='cat1'")
+        .assign(measure="transition_rate_among_x_factor_cat1")
+    )
+    # Wasting state incidence rates without X-factor
+    incidence_without_x_factor = (
+        incidence_rates.query("x_factor=='cat2'")
+        .assign(measure="transition_rate_among_x_factor_cat2")
+    )
+    # Compute incidence ratio
+    incidence_rate_ratio = vop.ratio(
+        incidence_with_x_factor,
+        incidence_without_x_factor,
+        strata=vop.list_columns(strata, 'transition'),
+    )
+    return incidence_rate_ratio
 
 def get_sqlns_mam_incidence_ratio(data:VivariumResults):
     """Computes the incidence rate ratio of MAM for SQLNS-covered vs. SQLNS-uncovered.
