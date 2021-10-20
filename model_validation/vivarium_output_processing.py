@@ -24,6 +24,12 @@ def _ensure_iterable(colnames, df, default=None):
     """Wrap a single column name in a list, or return colnames unaltered if it's already a list of column names.
     If colnames is None, its value will first be set to the default value (e.g. pass `default=[]` to default to
     an empty list when colnames is None).
+    Note: A single-dispatch generic function may be a better way to handle this.
+    See the example of the overloaded flatten() function in PEP 3124, and the example use case of operating
+    on either an object or an iterable of objects in PEP 0443 for single-dispatch generic functions:
+    https://www.python.org/dev/peps/pep-3124/
+    https://www.python.org/dev/peps/pep-0443/
+    https://docs.python.org/3/library/functools.html#functools.singledispatch
     """
 
     def method1(colnames, df):
