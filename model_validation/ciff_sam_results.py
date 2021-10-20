@@ -356,7 +356,7 @@ def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
     ).assign(measure='transition_rate')
     return transition_rates
 
-def get_relative_risk(data, measure, outcome_variable, strata, factor, reference_category, prefilter_query=None):
+def get_relative_risk(data, measure, outcome, strata, factor, reference_category, prefilter_query=None):
     """
     `measure` could be one of 'prevalence', 'incidence', 'mortality', 'remission' (or generically, 'rate').
         Maybe 'prevalence', 'transition_rate', or 'mortality_rate' since each of these has a different type
@@ -370,14 +370,39 @@ def get_relative_risk(data, measure, outcome_variable, strata, factor, reference
         with the actual outcome being one or more items described by this variable (e.g. the specific
         stunting or wasting categories, specific wasting state or cause state transitions, or deaths from
         a specific cause).
-    `factor` is the (risk) factor for which we want to compute the relative risk (e.g. x_factor, sq_lns,
-    stunting_state, wasting_state).
+    `factor` is the risk factor or other stratifying variable for which we want to compute the relative risk
+    (e.g. x_factor, sq_lns, stunting_state, wasting_state).
     `reference_category` is the factor category to put in the denominator to use as a reference for computing
     relative risks (e.g. the TMREL). The numerator should be broadcast over all remaining categories. (Note: In order
     to do that, I will have to employ a similar strategy to what I did in the `difference` function, and add the
     factor category column to the index with different names in the numerator and denominator.)
     """
-    return
+    if measure=='prevalence':
+        get_measure = get_prevalence
+        ratio_strata = vop.list_columns(strata, outcome)
+    elif measure=='transition_rate':
+        get_measure = get_transition_rates
+        ratio_strata = vop.list_columns(strata, 'transition', 'from_state', 'to_state')
+    elif measure=='mortality_rate': # Or burden_rate, and then pass 'death', 'yll', or 'yld' for outcome
+#         get_measure = get_rates
+#         ratio_strata = vop.list_columns(strata, ???)
+        raise NotImplementedError("relative mortality rates have not yet been implemented")
+    else:
+        raise ValueError(f"Unknown measure: {measure}")
+    # Add risk factor to strata in order to get prevalence or rate in different risk factor categories
+    measure_df = get_measure(data, outcome, vop.list_columns(strata, factor), prefilter_query)
+    numerator = (measure_df.query(f"{factor} != '{reference_category}'")
+                 .rename(columns={f"{factor}":f"numerator_{factor}"}))
+    denominator = (measure_df.query(f"{factor} == '{reference_category}'")
+                   .rename(columns={f"{factor}":f"denominator_{factor}"}))
+    relative_risk = vop.ratio(
+        numerator,
+        denominator,
+        ratio_strata, # Match outcome categories to compute the relative risk
+        numerator_broadcast=f"numerator_{factor}",
+        denominator_broadcast=f"denominator_{factor}",
+    ).assign(measure='relative_risk')
+    return relative_risk
 
 def get_sam_duration(data, strata):
     sam_person_time = data.wasting_state_person_time.query(
