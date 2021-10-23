@@ -1,5 +1,6 @@
 import pandas as pd
 import collections
+from functools import singledispatch
 
 VALUE_COLUMN = 'value'
 DRAW_COLUMN  = 'input_draw'
@@ -19,6 +20,40 @@ def set_global_index_columns(index_columns:list)->None:
     """
     global INDEX_COLUMNS
     INDEX_COLUMNS = index_columns
+
+@singledispatch
+def generate(item, default=None):
+    yield item
+
+@generate.register
+def _(items: type(None), default=None):
+    if default is None:
+        yield None
+    else:
+        yield from default
+
+@generate.register(list)
+@generate.register(pd.Index)
+# @generate.register(np.ndarray)
+def _(items, default=None):
+    yield from items
+
+@singledispatch
+def iterize(colname, default=None):
+    return [colname]
+
+@iterize.register(type(None))
+def _(colnames: type(None), default=None):
+    if default is None:
+        return [None]
+    else:
+        return default
+
+@iterize.register(list)
+@iterize.register(pd.Index)
+# @iterize.register(np.ndarray)
+def _(colnames, default=None):
+    return colnames
 
 def _ensure_iterable(colnames, df, default=None):
     """Wrap a single column name in a list, or return colnames unaltered if it's already a list of column names.
