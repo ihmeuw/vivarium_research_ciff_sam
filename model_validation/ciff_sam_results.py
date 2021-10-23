@@ -296,6 +296,17 @@ def get_all_causes_measure(measure_df, append=False):
     else:
         return all_causes_measure
 
+def find_person_time_tables(data, colnames, exclude=None):
+    """Generate person-time tables in data with the specified column names, excluding the specified table names."""
+    colnames = set(vop.list_columns(colnames))
+    exclude = vop.list_columns(exclude, default=[])
+    table_names = (
+        table_name for table_name, table in data.items()
+        if table_name not in exclude and table_name.endswith("person_time")
+        and colnames.issubset(table.columns)
+    )
+    return table_names
+
 def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs):
     """Compute the prevalence of the specified state_variable, which may be a risk or cause state
     (one of 'wasting_state', 'stunting_state', or 'cause_state'), or another stratification variable
@@ -306,21 +317,27 @@ def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs)
     The `kwargs` dictionary stores keyword arguments to pass to the vivarium_output_processing.ratio()
     function.
     """
+    # Broadcast the numerator over the state variable to compute the prevalence of each state
+    kwargs['numerator_broadcast'] = vop.list_columns(
+        state_variable, kwargs.get('numerator_broadcast'), default=[])
+    # Determine columns we need for numerator and denominator so we can look up appropriate person-time tables
+    numerator_columns = vop.list_columns(strata, kwargs.get('numerator_broadcast'), default=[])
+    denominator_columns = vop.list_columns(strata, kwargs.get('denominator_broadcast'), default=[])
     # Define numerator
     if f"{state_variable}_person_time" in data:
         state_person_time = data[f"{state_variable}_person_time"]
     else:
-        # state_variable must be a column in total person time table
-        state_person_time = data.person_time
-    # Define denominator
-    person_time = data.person_time
+        # Find a person-time table that contains necessary columns for numerator
+        state_person_time = data[next(find_person_time_tables(data, numerator_columns))]
+    # Find a person-time table that contains necessary columns for total person-time in the denominator.
+    # Exclude cause-state person-time because it contains total person-time muliple times,
+    # which would make us over-count.
+    person_time = data[next(find_person_time_tables(data, denominator_columns, exclude='cause_state_person_time'))]
     # Filter input dataframes if requested
     if prefilter_query is not None:
         state_person_time = state_person_time.query(prefilter_query)
         person_time = person_time.query(prefilter_query)
-    # Broadcast the numerator over the state variable to compute the prevalence of each state
-    kwargs['numerator_broadcast'] = vop.list_columns(
-        state_variable, kwargs.get('numerator_broadcast'), df=state_person_time, default=[])
+
     # Divide
     prevalence = vop.ratio(
         numerator=state_person_time,
