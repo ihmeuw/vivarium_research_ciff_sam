@@ -1,7 +1,22 @@
 import pandas as pd
 import collections
 
-VALUE_COLUMN = 'value'
+import inspect
+import sys
+
+# VALUE_COLUMN = 'value'
+# This doesn't work as expected: vop.VALUE_COLUMN returns a property object
+# from which you have to call .fget() to return the string 'value'
+@property
+def VALUE_COLUMN():
+    return 'value'
+# It looks like properties only work as expected with classes, not modules:
+# C().VALUE_COLUMN returns 'value'
+class C:
+    @property
+    def VALUE_COLUMN(self):
+        return 'value'
+
 DRAW_COLUMN  = 'input_draw'
 SCENARIO_COLUMN = 'scenario'
 MEASURE_COLUMN = 'measure'
@@ -466,3 +481,53 @@ def compare_values(df1, df2, **kwargs):
     df1 = value(df1)
     df2 = value(df2).reindex(df1.index)
     return df1.compare(df2, **kwargs)
+
+def get_module_functions():
+    return inspect.getmembers(sys.modules[__name__], inspect.isfunction)
+
+class VivariumOutputProcessor:
+    """Class to implement all the functions of the vivarium_output_processing module as methods
+    and store global variables as instance variables, so that different instances can be created
+    with different global parameters.
+    """
+    def __init__(
+        self,
+        value_column=VALUE_COLUMN,
+        draw_column=DRAW_COLUMN,
+        scenario_column=SCENARIO_COLUMN,
+        measure_column=MEASURE_COLUMN,
+        index_columns=None,
+    ):
+        self.value_column=value_column
+        self.draw_column=draw_column
+        self.scenario_column=scenario_column
+        self.measure_column=measure_column
+        self.index_columns = [self.draw_column, self.scenario_column] if index_columns is None else index_columns
+        module_function_members = inspect.getmembers(sys.modules[__name__], inspect.isfunction)
+        to_omit = ['set_global_index_columns']
+        for function_name, function in module_function_members:
+            if function_name not in to_omit:
+                setattr(self, function_name, self._use_instance_variables(function))
+
+    def _use_instance_variables(self, func):
+        """Damn, I don't think this will work unless I override *all* the function names (not just column names)
+        that get called from other functions , but I don't think there's a way
+        to automatically assign local variable names after looking them up with getmembers.
+        Instead I'd have to manually assign each one, which is not very maintainable if I add more functions
+        or refactor things.
+        """
+        def instance_variables_wrapped_func(*args, **kwargs):
+            VALUE_COLUMN = self.value_column
+            DRAW_COLUMN  = self.draw_column
+            SCENARIO_COLUMN = self.scenario_column
+            MEASURE_COLUMN = self.measure_column
+            INDEX_COLUMNS = self.index_columns
+            value = self.value
+            marginalize = self.marginalize
+            stratify = self.stratify
+#             ratio = self.ratio
+#             difference = self.difference
+#             averted = self.averted
+#             describe = self.describe
+            func(*args, **kwargs)
+        return instance_variables_wrapped_func
