@@ -319,18 +319,15 @@ def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs)
         state_person_time = state_person_time.query(prefilter_query)
         person_time = person_time.query(prefilter_query)
     # Broadcast the numerator over the state variable to compute the prevalence of each state
-    if 'numerator_broadcast' in kwargs:
-        kwargs['numerator_broadcast'] = vop.list_columns(
-            state_variable, kwargs['numerator_broadcast'], df=state_person_time, default=[])
-    else:
-        kwargs['numerator_broadcast'] = state_variable
+    kwargs['numerator_broadcast'] = vop.list_columns(
+        state_variable, kwargs.get('numerator_broadcast'), df=state_person_time, default=[])
     # Divide
     prevalence = vop.ratio(
         numerator=state_person_time,
         denominator=person_time,
         strata=strata,
         **kwargs, # Includes numerator_broadcast over state_variable
-    )
+    ).assign(measure='prevalence')
     return prevalence
 
 def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
@@ -341,14 +338,10 @@ def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
     state_person_time = data[f"{entity}_state_person_time"].rename(columns={f"{entity}_state": "from_state"})
     strata = vop.list_columns(strata, "from_state")
 
-    # Filter the numerator (and denominator) if requested
+    # Filter the numerator and denominator if requested
     if prefilter_query is not None:
         transition_count = transition_count.query(prefilter_query)
         state_person_time = state_person_time.query(prefilter_query)
-#         # Filter the denominator strata to match the numerator strata in order to avoid NaN's when dividing
-#         stratum_lists = {colname: tuple(transition_count[colname].unique()) for colname in strata}
-#         person_time_query = " and ".join(f"({colname} in {stratum_list})" for colname, stratum_list in stratum_lists.items())
-#         state_person_time = state_person_time.query(person_time_query)
 
     # Broadcast numerator over transition (and redundantly, to_state) to get the transition rate across
     # each arrow separately. Without this broadcast, we'd get the sum of all rates out of each state.
@@ -360,8 +353,53 @@ def get_transition_rates(data, entity, strata, prefilter_query=None, **kwargs):
         state_person_time,
         strata = strata,
         **kwargs
-    )
+    ).assign(measure='transition_rate')
     return transition_rates
+
+def get_relative_risk(data, measure, outcome, strata, factor, reference_category, prefilter_query=None):
+    """
+    `measure` is one of 'prevalence', 'transition_rate', or 'mortality_rate'.
+        Each of these has a different type of table for the numerator (person time, transition_count, or deaths).
+    `outcome` is passed to either get_transition_rates or get_prevalence,
+        and represents the outcome for which we want to compute the relative risk (e.g. 'stunting_state',
+        'wasting_state', or a stratification variable for measure=='prevalence', or 'wasting' or 'cause' for
+        measure=='transition_rate', or 'cause'??? or 'death'??? or None??? or cause_name???
+        for measure=='mortality_rate').
+        Note that `outcome` may be sort of a "meta-description" of the outcome we're interested in,
+        with the actual outcome being one or more items described by this variable (e.g. the specific
+        stunting or wasting categories, specific wasting state or cause state transitions, or deaths from
+        a specific cause).
+    `factor` is the risk factor or other stratifying variable for which we want to compute the relative risk
+        (e.g. x_factor, sq_lns, stunting_state, wasting_state).
+    `reference_category` is the factor category to put in the denominator to use as a reference for computing
+        relative risks (e.g. the TMREL). The numerator will be broadcast over all remaining categories.
+    """
+    if measure=='prevalence':
+        get_measure = get_prevalence
+        ratio_strata = vop.list_columns(strata, outcome)
+    elif measure=='transition_rate':
+        get_measure = get_transition_rates
+        ratio_strata = vop.list_columns(strata, 'transition', 'from_state', 'to_state')
+    elif measure=='mortality_rate': # Or burden_rate, and then pass 'death', 'yll', or 'yld' for outcome
+#         get_measure = get_rates # or get_burden_rates
+#         ratio_strata = vop.list_columns(strata, ???)
+        raise NotImplementedError("relative mortality rates have not yet been implemented")
+    else:
+        raise ValueError(f"Unknown measure: {measure}")
+    # Add risk factor to strata in order to get prevalence or rate in different risk factor categories
+    measure_df = get_measure(data, outcome, vop.list_columns(strata, factor), prefilter_query)
+    numerator = (measure_df.query(f"{factor} != '{reference_category}'")
+                 .rename(columns={f"{factor}":f"numerator_{factor}"}))
+    denominator = (measure_df.query(f"{factor} == '{reference_category}'")
+                   .rename(columns={f"{factor}":f"denominator_{factor}"}))
+    relative_risk = vop.ratio(
+        numerator,
+        denominator,
+        ratio_strata, # Match outcome categories to compute the relative risk
+        numerator_broadcast=f"numerator_{factor}",
+        denominator_broadcast=f"denominator_{factor}",
+    ).assign(measure='relative_risk') # Or perhaps I should be more specific, i.e. "prevalence_ratio" or "rate_ratio"
+    return relative_risk
 
 def get_sam_duration(data, strata):
     sam_person_time = data.wasting_state_person_time.query(
@@ -394,39 +432,32 @@ def get_x_factor_wasting_transition_rate_ratio(data:VivariumResults, strata):
     """Computes the ratios of incidence rates into Mild, MAM, and SAM for simulants with
     X-factor to the incidence rates for simulants without X-factor.
     """
-    wasting_incidence_transitions = (
-        'susceptible_to_child_wasting_to_mild_child_wasting',
-        'mild_child_wasting_to_moderate_acute_malnutrition',
-        'moderate_acute_malnutrition_to_severe_acute_malnutrition',
-    )
     under_6mo, over_6mo, all_ages = map(list, get_age_group_bins('6-11_months', 'all_ages'))
-    # Wasting state incidence rates
-#     transition_query=f"age in {over_6mo} and transition in {wasting_incidence_transitions}"
-#     # Need to stratify by X-factor to get transition rates with/without X-factor
-#     incidence_rates = get_transition_rates(
-#         data, 'wasting', vop.list_columns(strata, 'x_factor'), transition_query)
+    # Wasting state transition rates
     prefilter_query=f"age in {over_6mo}"
     # Need to stratify by X-factor to get transition rates with/without X-factor
-    incidence_rates = get_transition_rates(
+    transition_rates = get_transition_rates(
         data, 'wasting', vop.list_columns(strata, 'x_factor'), prefilter_query)
 
-    # Wasting state incidence rates with X-factor
-    incidence_with_x_factor = (
-        incidence_rates.query("x_factor=='cat1'")
-        .assign(measure="transition_rate_among_x_factor_cat1")
+    # Reference category = without X-factor (denominator)
+    transition_rate_without_x_factor =(
+        transition_rates.query("x_factor=='cat2'")
+        .rename(columns={'x_factor':'denominator_x_factor'})
     )
-    # Wasting state incidence rates without X-factor
-    incidence_without_x_factor = (
-        incidence_rates.query("x_factor=='cat2'")
-        .assign(measure="transition_rate_among_x_factor_cat2")
+    # Non-reference category(ies) = with X-factor (numerator)
+    transition_rate_with_x_factor =(
+        transition_rates.query("x_factor!='cat2'")
+        .rename(columns={'x_factor':'numerator_x_factor'})
     )
-    # Compute incidence ratio
-    incidence_rate_ratio = vop.ratio(
-        incidence_with_x_factor,
-        incidence_without_x_factor,
-        strata=vop.list_columns(strata, 'transition'),
-    )
-    return incidence_rate_ratio
+    # Compute transition rate ratio
+    transition_rate_ratio = vop.ratio(
+        transition_rate_with_x_factor,
+        transition_rate_without_x_factor,
+        strata=vop.list_columns(strata, 'transition', 'from_state', 'to_state'),
+        numerator_broadcast='numerator_x_factor',
+        denominator_broadcast='denominator_x_factor',
+    ).assign(measure='rate_ratio')
+    return transition_rate_ratio
 
 def get_sqlns_mam_incidence_ratio(data:VivariumResults):
     """Computes the incidence rate ratio of MAM for SQLNS-covered vs. SQLNS-uncovered.
