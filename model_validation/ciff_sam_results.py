@@ -327,12 +327,20 @@ def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs)
     if f"{state_variable}_person_time" in data:
         state_person_time = data[f"{state_variable}_person_time"]
     else:
+        try:
+            numerator_table_name = next(find_person_time_tables(data, numerator_columns))
+        except StopIteration:
+            raise ValueError(f"No person-time table found with numerator columns {numerator_columns}")
         # Find a person-time table that contains necessary columns for numerator
-        state_person_time = data[next(find_person_time_tables(data, numerator_columns))]
+        state_person_time = data[numerator_table_name]
     # Find a person-time table that contains necessary columns for total person-time in the denominator.
     # Exclude cause-state person-time because it contains total person-time muliple times,
     # which would make us over-count.
-    person_time = data[next(find_person_time_tables(data, denominator_columns, exclude='cause_state_person_time'))]
+    try:
+        denominator_table_name = next(find_person_time_tables(data, denominator_columns, exclude='cause_state_person_time'))
+    except StopIteration:
+        raise ValueError(f"No person-time table found with denominator columns {denominator_columns}")
+    person_time = data[denominator_table_name]
     # Filter input dataframes if requested
     if prefilter_query is not None:
         state_person_time = state_person_time.query(prefilter_query)
