@@ -365,7 +365,7 @@ def get_relative_risk(data, measure, outcome, strata, factor, reference_category
         'wasting_state', or a stratification variable for measure=='prevalence', or 'wasting' or 'cause' for
         measure=='transition_rate', or 'cause'??? or 'death'??? or None??? or cause_name???
         for measure=='mortality_rate').
-        Note that `table_entity` may be sort of a "meta-description" of the outcome we're interested in,
+        Note that `outcome` may be sort of a "meta-description" of the outcome we're interested in,
         with the actual outcome being one or more items described by this variable (e.g. the specific
         stunting or wasting categories, specific wasting state or cause state transitions, or deaths from
         a specific cause).
@@ -381,7 +381,7 @@ def get_relative_risk(data, measure, outcome, strata, factor, reference_category
         get_measure = get_transition_rates
         ratio_strata = vop.list_columns(strata, 'transition', 'from_state', 'to_state')
     elif measure=='mortality_rate': # Or burden_rate, and then pass 'death', 'yll', or 'yld' for outcome
-#         get_measure = get_rates
+#         get_measure = get_rates # or get_burden_rates
 #         ratio_strata = vop.list_columns(strata, ???)
         raise NotImplementedError("relative mortality rates have not yet been implemented")
     else:
