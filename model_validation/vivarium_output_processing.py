@@ -4,19 +4,18 @@ import collections
 import inspect
 import sys
 
-# VALUE_COLUMN = 'value'
-# This doesn't work as expected: vop.VALUE_COLUMN returns a property object
-# from which you have to call .fget() to return the string 'value'
-@property
-def VALUE_COLUMN():
-    return 'value'
-# It looks like properties only work as expected with classes, not modules:
-# C().VALUE_COLUMN returns 'value'
-class C:
-    @property
-    def VALUE_COLUMN(self):
-        return 'value'
-
+VALUE_COLUMN = 'value'
+# # This doesn't work as expected: vop.VALUE_COLUMN returns a property object
+# # from which you have to call .fget() to return the string 'value'
+# @property
+# def VALUE_COLUMN():
+#     return 'value'
+# # It looks like properties only work as expected with classes, not modules:
+# # C().VALUE_COLUMN returns 'value'
+# class C:
+#     @property
+#     def VALUE_COLUMN(self):
+#         return 'value'
 DRAW_COLUMN  = 'input_draw'
 SCENARIO_COLUMN = 'scenario'
 MEASURE_COLUMN = 'measure'
@@ -525,9 +524,10 @@ class VivariumOutputProcessor:
             value = self.value
             marginalize = self.marginalize
             stratify = self.stratify
+            print(INDEX_COLUMNS)
 #             ratio = self.ratio
 #             difference = self.difference
 #             averted = self.averted
 #             describe = self.describe
-            func(*args, **kwargs)
+            return func(*args, **kwargs)
         return instance_variables_wrapped_func
