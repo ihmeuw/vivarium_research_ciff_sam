@@ -308,7 +308,7 @@ def find_person_time_tables(data, colnames, exclude=None):
     return table_names
 
 def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs):
-    """Compute the prevalence of the specified state_variable, which may be a risk or cause state
+    """Compute the prevalence of the specified state_variable, which may represent a risk state or cause state
     (one of 'wasting_state', 'stunting_state', or 'cause_state'), or another stratification variable
     tracked in the simulation (e.g. 'sq_lns', 'wasting_treatment', or 'x_factor').
     `prefilter_query` is a query string passed to the DataFrame.query() function of both the
@@ -321,20 +321,22 @@ def get_prevalence(data, state_variable, strata, prefilter_query=None, **kwargs)
     kwargs['numerator_broadcast'] = vop.list_columns(
         state_variable, kwargs.get('numerator_broadcast'), default=[])
     # Determine columns we need for numerator and denominator so we can look up appropriate person-time tables
-    numerator_columns = vop.list_columns(strata, kwargs.get('numerator_broadcast'), default=[])
+    numerator_columns = vop.list_columns(strata, kwargs['numerator_broadcast'])
     denominator_columns = vop.list_columns(strata, kwargs.get('denominator_broadcast'), default=[])
     # Define numerator
     if f"{state_variable}_person_time" in data:
         state_person_time = data[f"{state_variable}_person_time"]
     else:
         try:
-            numerator_table_name = next(find_person_time_tables(data, numerator_columns))
+            # Exclude cause-state person-time because it contains total person-time multiple times,
+            # which would make us over-count.
+            numerator_table_name = next(find_person_time_tables(data, numerator_columns, exclude='cause_state_person_time'))
         except StopIteration:
             raise ValueError(f"No person-time table found with numerator columns {numerator_columns}")
         # Find a person-time table that contains necessary columns for numerator
         state_person_time = data[numerator_table_name]
     # Find a person-time table that contains necessary columns for total person-time in the denominator.
-    # Exclude cause-state person-time because it contains total person-time muliple times,
+    # Exclude cause-state person-time because it contains total person-time multiple times,
     # which would make us over-count.
     try:
         denominator_table_name = next(find_person_time_tables(data, denominator_columns, exclude='cause_state_person_time'))
