@@ -18,6 +18,8 @@ ordered_wasting_states = [
     'moderate_acute_malnutrition',
     'mild_child_wasting',
     'susceptible_to_child_wasting',
+    'acute_malnutrition', # superstate comprising SAM and MAM
+    'no_acute_malnutrition', # superstate comprising MILD and TMREL
 ]
 
 class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping):
