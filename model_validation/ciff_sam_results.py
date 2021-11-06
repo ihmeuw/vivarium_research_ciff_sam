@@ -107,6 +107,7 @@ models = pd.DataFrame(
         ['4.0', 'v4.0_wasting_treatment', '2021_09_20_14_45_25'],
         ['4.1', 'v4.1_wasting_treatment', '2021_09_24_16_36_30'],
         ['4.5.2', 'v4.5.2_x_factor', '2021_09_29_12_12_47'],
+        ['4.5.3', 'v4.5.3_x_factor_targeted_exposure', '2021_11_02_20_09_56'],
     ],
     columns=['model_id', 'model_name', 'run_id']
 )
