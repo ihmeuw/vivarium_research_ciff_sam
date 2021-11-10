@@ -88,9 +88,13 @@ def plot_over_time_by_column_for_each_wasting_state_and_scenario(
     """Draw a 4x3 figure with rows indexed by wasting state and columns indexed by scenario,
     calling plot_over_time_by_column() for each subplot.
     """
-    fig, axs = plt.subplots(4, 3, figsize=(16, 16))
-    for ws_num, wasting_state in enumerate(csr.ordered_wasting_states):
-        for s_num, scenario in enumerate(csr.ordered_scenarios):
+    # Get ordered lists of wasting states and scenarios in the dataframe
+    df = csr.to_ordered_categoricals(df)
+    wasting_states = df['wasting_state'].unique().sort_values()
+    scenarios = df['scenario'].unique().sort_values()
+    fig, axs = plt.subplots(len(wasting_states), len(scenarios), figsize=(16, 16))
+    for ws_num, wasting_state in enumerate(wasting_states):
+        for s_num, scenario in enumerate(scenarios):
     #         print(scenario, wasting_state)
             plot_over_time_by_column(
                 df.query("scenario==@scenario and wasting_state==@wasting_state"),
