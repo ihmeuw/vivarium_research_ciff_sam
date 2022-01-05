@@ -1,5 +1,8 @@
 import pandas as pd, numpy as np, matplotlib.pyplot as plt
 
+import re
+from pathlib import Path
+
 import model_validation.vivarium_output_processing as vop
 import model_validation.ciff_sam_results as csr
 
@@ -138,3 +141,24 @@ def convert_to_variable_name(string):
     https://stackoverflow.com/questions/3303312/how-do-i-convert-a-string-to-a-valid-variable-name-in-python
     """
     return re.sub('\W+|^(?=\d)', '_', string)
+
+def create_output_directories(username, model_name):
+    """
+    Creates directories for saving plots if they don't already exist.
+    """
+    project_vv_directory_name = 'ciff_malnutrition/verification_and_validation'
+
+    home_output_dir = f'/ihme/homes/{username}/vivarium_results/{project_vv_directory_name}/{model_name}'
+    share_output_dir = f'/share/scratch/users/ndbs/vivarium_results/{project_vv_directory_name}/{model_name}'
+    j_output_dir = f'/home/j/Project/simulation_science/{project_vv_directory_name}/{model_name}'
+
+    directories = [home_output_dir, j_output_dir] # Omit share_directory for now
+
+    # Create the output directories if they don't exist
+    # Note from Path.mkdir() documentation:
+    #   "If mode is given, it is combined with the process’ umask value to determine the file mode and access flags."
+    #
+    # I don't know what this notebook process' umask value will be, so I don't know if this will actually result
+    # in the correct (most permissive) permissions for the directories...
+    for directory in directories:
+        Path(directory).mkdir(mode=0o777, parents=True, exist_ok=True)
