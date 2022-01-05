@@ -128,3 +128,13 @@ def plot_over_time_by_column_for_each_scenario(df, colname, ylabel, suptitle, un
     fig.suptitle(suptitle, fontsize=18)
     fig.tight_layout()
     return fig
+
+# We'll use this function to format the figures' title strings into legitimate file names for saving.
+def convert_to_variable_name(string):
+    """Converts a string to a valid Python variable.
+    Runs of non-word characters (regex matchs \W+) are converted to '_', and '_' is appended to the
+    beginning of the string if the string starts with a digit (regex matches ^(?=\d)).
+    Solution copied from here:
+    https://stackoverflow.com/questions/3303312/how-do-i-convert-a-string-to-a-valid-variable-name-in-python
+    """
+    return re.sub('\W+|^(?=\d)', '_', string)
