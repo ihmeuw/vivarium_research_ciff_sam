@@ -111,6 +111,7 @@ models = pd.DataFrame(
         ['4.5.4', 'v4.5.4_x_factor_wasting_propensity', '2021_11_09_20_57_59'],
         ['4.5.5', 'v4.5.5_linear_scale-up_etc', '2021_11_22_09_07_22'],
         ['4.5.5', 'v4.5.5_linear_scale-up_etc', '2021_11_23_17_59_09'],
+        ['5.1.2', 'v5.1.2_lbwsg_with_observer', '2021_12_29_17_30_01'],
     ],
     columns=['model_id', 'model_name', 'run_id']
 )
