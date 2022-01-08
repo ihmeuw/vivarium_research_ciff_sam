@@ -25,14 +25,25 @@ def string_to_interval(interval_strings: pd.Series) -> pd.Series:
     intervals = np.vectorize(pd.Interval)(df['left'].astype(int), df['right'].astype(int), df['closed'])
     return pd.Series(intervals, index=interval_strings.index, name=interval_strings.name)
 
-# `read_cat_df` requires `cats_to_ordered_categorical` and
+# `read_cat_df` requires `convert_category_data_dtypes`,
+# `cats_to_ordered_categorical`, and
 # `string_to_interval` helper functions
 def read_cat_df(filename: str) -> pd.DataFrame:
     """Reads in the LBWSG category data .csv as a DataFrame, and converts the category column into a
     pandas ordered Categorical and the GA and BW interval columns into Series of pandas Interval objects.
     """
-    cat_df = pd.read_csv(filename)
-    cat_df['lbwsg_category'] = cats_to_ordered_categorical(cat_df['lbwsg_category'])
+    cat_df = pd.read_csv(filename).pipe(convert_category_data_dtypes)
+    return cat_df
+
+# `convert_category_data_dtypes` requires
+# `cats_to_ordered_categorical` and
+# `string_to_interval` helper functions
+def convert_category_data_dtypes(cat_df):
+    """Takes the LBWSG category data DataFrame and converts the category and parameter columns into
+    pandas ordered Categoricals and the GA and BW interval columns into Series of pandas Interval objects.
+    """
+    # Use .assign to make a copy of the dataframe
+    cat_df = cat_df.assign(lbwsg_category = cats_to_ordered_categorical(cat_df['lbwsg_category']))
     cat_df['parameter'] = cat_df['lbwsg_category']
     cat_df['ga_interval'] = string_to_interval(cat_df['ga_interval'])
     cat_df['bw_interval'] = string_to_interval(cat_df['bw_interval'])
