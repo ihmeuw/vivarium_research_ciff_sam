@@ -12,7 +12,7 @@ DEFAULT_STRATA = ['year', 'sex', 'age']
 ordered_ages = ['early_neonatal', 'late_neonatal', '1-5_months', '6-11_months', '12_to_23_months', '2_to_4', 'all_ages']
 ordered_ages_dtype = pd.api.types.CategoricalDtype(ordered_ages, ordered=True)
 ages_categorical = pd.Categorical(ordered_ages, categories=ordered_ages, ordered=True)
-ordered_scenarios = ['baseline', 'wasting_treatment', 'sqlns']
+ordered_scenarios = ['baseline', 'wasting_treatment', 'sqlns', 'lbwsg_interventions']
 ordered_wasting_states = [
     'severe_acute_malnutrition',
     'moderate_acute_malnutrition',
