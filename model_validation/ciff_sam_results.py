@@ -13,13 +13,18 @@ ordered_ages = ['early_neonatal', 'late_neonatal', '1-5_months', '6-11_months', 
 ordered_ages_dtype = pd.api.types.CategoricalDtype(ordered_ages, ordered=True)
 ages_categorical = pd.Categorical(ordered_ages, categories=ordered_ages, ordered=True)
 ordered_scenarios = ['baseline', 'wasting_treatment', 'sqlns', 'lbwsg_interventions']
+wasting_superstate_to_states = {
+    'global_acute_malnutrition': ['moderate_acute_malnutrition', 'severe_acute_malnutrition'],
+    'no_acute_malnutrition': ['susceptible_to_child_wasting', 'mild_child_wasting'],
+}
 ordered_wasting_states = [
     'severe_acute_malnutrition',
     'moderate_acute_malnutrition',
     'mild_child_wasting',
     'susceptible_to_child_wasting',
-    'acute_malnutrition', # superstate comprising SAM and MAM
-    'no_acute_malnutrition', # superstate comprising MILD and TMREL
+    *wasting_superstate_to_states.keys(), # List superstates after substates
+#     'global_acute_malnutrition', # superstate comprising SAM and MAM
+#     'no_acute_malnutrition', # superstate comprising MILD and TMREL
 ]
 
 class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping):
