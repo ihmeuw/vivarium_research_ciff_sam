@@ -217,6 +217,38 @@ def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True
     summed_data = df.groupby(index_cols, observed=True)[value_cols].sum()
     return summed_data.reset_index() if reset_index else summed_data
 
+def aggregate_categories(df, category_col, supercategory_to_category, append=False):
+    """Aggrgates (by summing) the SAM and MAM wasting states into an 'acute_malnutrition' "superstate",
+    and aggregates (by summing) the TMREL and MILD wasting states into a 'no_acute_malnutrition' "superstate".
+    Returns a new dataframe with the same columns as the argument df.
+    If append is False (default), the new dataframe contains only the aggregated superstates,
+    in the 'wasting_state' column.
+    If append is True, the aggregated superstates are appended to the end of the dataframe df, and this
+    new concatnated dataframe is returned.
+
+    Note: This function could be generalized to aggregate specified categories in any specified column into
+    "supercategories" for that column. I have come across at least three other situations where this would
+    be useful: aggregating age groups into 'all_ages' or, e.g., 'over_6_months'; aggregating causes into
+    'all_causes'; and aggregating transition counts to calculate the total inflow into a wasting state.
+    """
+    category_to_supercategory = {
+        category: supercategory for supercategory, categories in supercategory_to_category.items() for category in categories
+    }
+    orig_category_col = f'original_{category_col}'
+    while orig_category_col in df:
+        orig_category_col += 'X'
+        if len(orig_category_col) >  len(category_col)+2000:
+            raise RuntimeError(f"Really?? What's up with this DataFrame's column names?! {orig_category_col=}")
+    aggregated_df = (
+        df.rename(columns={category_col: orig_category_col})
+        .assign(**{category_col: lambda df: df[orig_category_col].map(category_to_supercategory)})
+        .pipe(marginalize, orig_category_col)
+    )
+    if append:
+        return df.append(aggregated_df, ignore_index=True)
+    else:
+        return aggregated_df
+
 def ratio(
     numerator: pd.DataFrame,
     denominator: pd.DataFrame,
