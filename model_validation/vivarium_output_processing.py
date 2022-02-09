@@ -217,7 +217,7 @@ def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True
     summed_data = df.groupby(index_cols, observed=True)[value_cols].sum()
     return summed_data.reset_index() if reset_index else summed_data
 
-def aggregate_categories(df, category_col, supercategory_to_category, append=False):
+def aggregate_categories(df, category_col, supercategory_to_categories, append=False):
     """Aggrgates (by summing) the SAM and MAM wasting states into an 'acute_malnutrition' "superstate",
     and aggregates (by summing) the TMREL and MILD wasting states into a 'no_acute_malnutrition' "superstate".
     Returns a new dataframe with the same columns as the argument df.
@@ -232,7 +232,7 @@ def aggregate_categories(df, category_col, supercategory_to_category, append=Fal
     'all_causes'; and aggregating transition counts to calculate the total inflow into a wasting state.
     """
     category_to_supercategory = {
-        category: supercategory for supercategory, categories in supercategory_to_category.items() for category in categories
+        category: supercategory for supercategory, categories in supercategory_to_categories.items() for category in categories
     }
     orig_category_col = f'original_{category_col}'
     while orig_category_col in df:
