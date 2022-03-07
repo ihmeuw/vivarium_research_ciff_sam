@@ -1,0 +1,7 @@
+input_draw_count: 1
+random_seed_count: 10
+
+branches:
+  - x_factor_effect = [1,1.25,1.5,1.75,2]
+    mild_child_wasting_untreated_recovery_time: [10,25,50,100,250,500]
+
