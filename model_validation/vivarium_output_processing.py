@@ -131,7 +131,7 @@ def marginalize(df:pd.DataFrame, marginalized_cols, value_cols=VALUE_COLUMN, res
     (sum values of a dataframe over a subset of the dataframe's columns), but the specified columns
     in the second argument of the two functions are opposites:
         For `marginalize` you specify the marginalized columns you want to sum over, whereas
-        for `stratify` you specify the stratification columns that you want to keep un-summed.
+        for `stratify` you specify the stratification columns that you want to keep disaggregated.
 
     Parameters
     ----------
@@ -177,10 +177,10 @@ def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True
     of the groupby. That is, the return value is df.groupby(strata+INDEX_COLS)[value_cols].sum()
 
     The `marginalize` and `stratify` functions are complementary in that the two functions do the same thing
-    (sum values of a dataframe over a subset of the dataframe's columns),but the specified columns
+    (sum values of a dataframe over a subset of the dataframe's columns), but the specified columns
     in the second argument of the two functions are opposites:
         For `marginalize` you specify the marginalized columns you want to sum over, whereas
-        for `stratify` you specify the stratification columns that you want to keep un-summed.
+        for `stratify` you specify the stratification columns that you want to keep disaggregated.
 
     Parameters
     ----------
@@ -216,6 +216,72 @@ def stratify(df: pd.DataFrame, strata, value_cols=VALUE_COLUMN, reset_index=True
     index_cols = [*strata, *INDEX_COLUMNS]
     summed_data = df.groupby(index_cols, observed=True)[value_cols].sum()
     return summed_data.reset_index() if reset_index else summed_data
+
+def aggregate_categories(df, category_col, supercategory_to_categories, append=False):
+    """Aggregates (by summing) the values corresponding to the specified categories in
+    a specified column of a dataframe into "supercategories" for that column.
+
+    The categories to aggregate and the supercategories they comprise are specified by the dictionary
+    `supercategory_to_categories`, which maps each supercategory name to the list of categories that
+    make up the supercategory.
+
+    Returns a new dataframe with the same columns as the argument `df`.
+    If append is False (default), the new dataframe contains only the aggregated supercategories,
+    in the `category_col` column.
+    If append is True, the aggregated supercategories are appended to the end of the dataframe df,
+    and this new concatnated dataframe is returned.
+
+    I have come across at least four use cases for this function in
+    the CIFF acute malnutrition project:
+    * Aggregating age groups into 'all_ages' or, e.g., 'over_6_months' (this could apply to any
+      additive measure, e.g., person time, wasting prevalence, or DALYs).
+    * Aggregating causes into 'all_causes' (e.g., for deaths or DALYs).
+    * Aggrgating the SAM and MAM wasting states into a 'global_acute_malnutrition' "superstate,"
+      and aggregating the TMREL and MILD wasting states into a 'no_acute_malnutrition' "superstate,"
+      to match the common definitions of "wasted" and "not wasted" (this could apply to prevalence
+      or to any additive measure stratified by wasting state).
+    * Aggregating transition counts to calculate the total inflow into a wasting state.
+
+    Parameters
+    ----------
+
+    df: DataFrame
+        The dataframe containing the category column to aggregates.
+
+    category_col: str
+        The name of the column containing the categories to aggregate.
+
+    supercategory_to_categories: dict
+        A dictionary mapping the name of each supercategory to a list of the categories
+        comprising the supercategory.
+
+    append: bool, default False
+        Whether to append the aggregated supercategories to the original dataframe or to
+        return a dataframe containing only the aggregated supercategories.'
+
+    Returns
+    -------
+    aggregated_df: DataFrame
+        A new dataframe which contains the aggregated supercategories, appended to the end of
+        `df` if `append` is True, or containing only the supercategories if `append` is False.
+    """
+    category_to_supercategory = {
+        category: supercategory for supercategory, categories in supercategory_to_categories.items() for category in categories
+    }
+    orig_category_col = f'original_{category_col}'
+    while orig_category_col in df:
+        orig_category_col += 'X'
+        if len(orig_category_col) >  len(category_col)+2000:
+            raise RuntimeError(f"Really?? What's up with this DataFrame's column names?! {orig_category_col=}")
+    aggregated_df = (
+        df.rename(columns={category_col: orig_category_col})
+        .assign(**{category_col: lambda df: df[orig_category_col].map(category_to_supercategory)})
+        .pipe(marginalize, orig_category_col) # TODO: Add value_cols and reset_index parameters and pass them here
+    )
+    if append:
+        return df.append(aggregated_df, ignore_index=True)
+    else:
+        return aggregated_df
 
 def ratio(
     numerator: pd.DataFrame,

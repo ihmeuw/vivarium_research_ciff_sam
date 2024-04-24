@@ -12,15 +12,24 @@ DEFAULT_STRATA = ['year', 'sex', 'age']
 ordered_ages = ['early_neonatal', 'late_neonatal', '1-5_months', '6-11_months', '12_to_23_months', '2_to_4', 'all_ages']
 ordered_ages_dtype = pd.api.types.CategoricalDtype(ordered_ages, ordered=True)
 ages_categorical = pd.Categorical(ordered_ages, categories=ordered_ages, ordered=True)
-ordered_scenarios = ['baseline', 'wasting_treatment', 'sqlns']
+ordered_scenarios = ['baseline', 'wasting_treatment', 'sqlns', 'lbwsg_interventions']
+wasting_states_by_superstate = {
+    'global_acute_malnutrition': ['moderate_acute_malnutrition', 'severe_acute_malnutrition'],
+    'no_acute_malnutrition': ['susceptible_to_child_wasting', 'mild_child_wasting'],
+}
 ordered_wasting_states = [
     'severe_acute_malnutrition',
     'moderate_acute_malnutrition',
     'mild_child_wasting',
     'susceptible_to_child_wasting',
-    'acute_malnutrition', # superstate comprising SAM and MAM
-    'no_acute_malnutrition', # superstate comprising MILD and TMREL
+    *wasting_states_by_superstate.keys(), # List superstates after substates
+#     'global_acute_malnutrition', # superstate comprising SAM and MAM
+#     'no_acute_malnutrition', # superstate comprising MILD and TMREL
 ]
+stunting_states_by_superstate = {
+    'stunted': ['cat1', 'cat2'],
+    'not_stunted': ['cat3', 'cat4'],
+}
 
 class VivariumResults(VivariumTransformedOutput, collections.abc.MutableMapping):
     """Implementation of the MutableMapping abstract base class to conveniently store transformed
@@ -111,6 +120,8 @@ models = pd.DataFrame(
         ['4.5.4', 'v4.5.4_x_factor_wasting_propensity', '2021_11_09_20_57_59'],
         ['4.5.5', 'v4.5.5_linear_scale-up_etc', '2021_11_22_09_07_22'],
         ['4.5.5', 'v4.5.5_linear_scale-up_etc', '2021_11_23_17_59_09'],
+        ['5.1.2', 'v5.1.2_lbwsg_with_observer', '2021_12_29_17_30_01'],
+        ['5.3.2', 'v5.3.2_remission_rate_changes', '2022_01_28_17_10_48'],
     ],
     columns=['model_id', 'model_name', 'run_id']
 )

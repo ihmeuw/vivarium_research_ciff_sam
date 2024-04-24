@@ -1,5 +1,8 @@
 import pandas as pd, numpy as np, matplotlib.pyplot as plt
 
+import re
+from pathlib import Path
+
 import model_validation.vivarium_output_processing as vop
 import model_validation.ciff_sam_results as csr
 
@@ -128,3 +131,55 @@ def plot_over_time_by_column_for_each_scenario(df, colname, ylabel, suptitle, un
     fig.suptitle(suptitle, fontsize=18)
     fig.tight_layout()
     return fig
+
+# We'll use this function to format the figures' title strings into legitimate file names for saving.
+def convert_to_variable_name(string):
+    """Converts a string to a valid Python variable.
+    Runs of non-word characters (regex matchs \W+) are converted to '_', and '_' is appended to the
+    beginning of the string if the string starts with a digit (regex matches ^(?=\d)).
+    Solution copied from here:
+    https://stackoverflow.com/questions/3303312/how-do-i-convert-a-string-to-a-valid-variable-name-in-python
+    """
+    return re.sub('\W+|^(?=\d)', '_', string)
+
+def create_output_directories(username, model_name, home=True, j_drive=True, share=False):
+    """
+    Creates directories for saving plots if they don't already exist,
+    and returns a list of the directories.
+    """
+    project_vv_directory_name = 'ciff_malnutrition/verification_and_validation'
+    directories=[]
+
+    if home:
+        home_output_dir = f'/ihme/homes/{username}/vivarium_results/{project_vv_directory_name}/{model_name}'
+        directories.append(home_output_dir)
+    if j_drive:
+        j_output_dir = f'/home/j/Project/simulation_science/{project_vv_directory_name}/{model_name}'
+        directories.append(j_output_dir)
+    if share:
+        share_output_dir = f'/share/scratch/users/ndbs/vivarium_results/{project_vv_directory_name}/{model_name}'
+        directories.append(share_output_dir)
+
+    # Create the output directories if they don't exist
+    # Note from Path.mkdir() documentation:
+    #   "If mode is given, it is combined with the process’ umask value to determine the file mode and access flags."
+    #
+    # I don't know what this notebook process' umask value will be, so I don't know if this will actually result
+    # in the correct (most permissive) permissions for the directories...
+    for directory in directories:
+        Path(directory).mkdir(mode=0o777, parents=True, exist_ok=True)
+    return directories
+
+def save_figures(figures: dict, directories):
+    """
+    Saves the figures to the specified directories as .pdf files.
+    `figures` is a dictionary mapping figure names (strings) to matplotlib Figure objects.
+        The figure names will be converted to valid filenames using the `convert_to_variable_name` function
+        before saving.
+    `directories` is a list of directories or a single directory name (str).
+    """
+    if isinstance(directories, str):
+        directories = [directories]
+    for figure_name, fig in figures.items():
+        for directory in directories:
+            fig.savefig(f"{directory}/{convert_to_variable_name(figure_name)}.pdf")
